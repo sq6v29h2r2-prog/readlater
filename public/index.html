@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadLater - Daha Sonra Oku</title>
+  <meta name="description" content="Makalelerinizi kaydedin, daha sonra okuyun">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-secondary);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-count {
+      background: var(--bg-tertiary);
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+
+    .top-nav {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      margin: -3rem -2rem 2rem -2rem;
+      width: calc(100% + 4rem);
+    }
+
+    .brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand:hover {
+      color: var(--accent);
+    }
+
+    .refresh-btn {
+      padding: 0.5rem 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .refresh-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .search-box {
+      margin-bottom: 1rem;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Üst Navbar -->
+    <nav class="top-nav">
+      <a href="/" class="brand">📖 Reader</a>
+      <button class="refresh-btn" onclick="location.reload()">🔄 Yenile</button>
+    </nav>
+
+    <header>
+      <h1>📖 ReadLater</h1>
+      <p class="subtitle">Makalelerinizi kaydedin, daha sonra okuyun</p>
+    </header>
+
+    <!-- URL Ekleme Formu -->
+    <section class="add-form">
+      <form id="addForm">
+        <input type="url" id="urlInput" placeholder="Makale URL'sini buraya yapıştırın..." required autocomplete="off">
+        <button type="submit" id="submitBtn">
+          <span class="btn-text">💾 Kaydet</span>
+          <span class="btn-loading" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" stroke-opacity="0.25" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round">
+                <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s"
+                  repeatCount="indefinite" />
+              </path>
+            </svg>
+          </span>
+        </button>
+      </form>
+      <div id="message" class="message" hidden></div>
+    </section>
+
+    <!-- Arama -->
+    <div class="search-box">
+      <input type="search" id="searchInput" placeholder="🔍 Makalelerde ara..." autocomplete="off">
+    </div>
+
+    <!-- Tab Menüsü -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="articles">
+        📚 Makaleler <span class="tab-count" id="articlesCount">0</span>
+      </button>
+      <button class="tab-btn" data-tab="archive">
+        📦 Arşiv <span class="tab-count" id="archiveCount">0</span>
+      </button>
+    </div>
+
+    <!-- Makale Listesi -->
+    <section class="articles">
+      <div id="articleList" class="article-list">
+        <div class="loading">Yükleniyor</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    let currentTab = 'articles';
+
+    // Tab değiştirme
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        searchQuery = '';
+        document.getElementById('searchInput').value = '';
+        loadArticles();
+      });
+    });
+
+    // Arama
+    let searchQuery = '';
+    let searchTimeout = null;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        loadArticles();
+      }, 300);
+    });
+
+    // Makale listesini yükle
+    async function loadArticles() {
+      const listEl = document.getElementById('articleList');
+      const endpoint = currentTab === 'archive' ? '/api/archived' : '/api/articles';
+
+      try {
+        const res = await fetch(`${API_BASE}${endpoint}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+
+        // Sayıları güncelle
+        updateCounts();
+
+        // Arama filtresi uygula
+        let articles = data.articles;
+        if (searchQuery) {
+          articles = articles.filter(a =>
+            (a.title && a.title.toLowerCase().includes(searchQuery)) ||
+            (a.site_name && a.site_name.toLowerCase().includes(searchQuery)) ||
+            (a.excerpt && a.excerpt.toLowerCase().includes(searchQuery))
+          );
+        }
+
+        if (articles.length === 0) {
+          const emptyMsg = searchQuery
+            ? `"${searchQuery}" için sonuç bulunamadı`
+            : (currentTab === 'archive' ? 'Arşivde makale yok' : 'Henüz kayıtlı makale yok');
+          listEl.innerHTML = `
+            <div class="empty">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">${searchQuery ? '🔍' : (currentTab === 'archive' ? '📦' : '📭')}</div>
+              <p>${emptyMsg}</p>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = articles.map((article, index) => `
+          <article class="article-card ${article.error ? 'has-error' : ''} ${article.read_at ? 'is-read' : ''}" style="animation-delay: ${index * 0.05}s">
+            <div class="article-content">
+              <h3>
+                <a href="/read/${article.id}">${escapeHtml(article.title || 'Başlıksız')}</a>
+              </h3>
+              <div class="article-meta">
+                ${article.site_name ? `<span class="site">${escapeHtml(article.site_name)}</span>` : ''}
+                <span class="date">📅 ${formatDate(article.saved_at)}</span>
+                ${article.read_at ? '<span class="read-badge">✓ Okundu</span>' : ''}
+              </div>
+              ${article.excerpt ? `<p class="excerpt">${escapeHtml(article.excerpt.substring(0, 180))}...</p>` : ''}
+              ${article.error ? `<div class="error-info">⚠️ ${escapeHtml(article.error)}</div>` : ''}
+            </div>
+            <div class="article-actions">
+              <a href="${article.url}" target="_blank" class="btn-link" title="Orijinal sayfayı aç">🔗</a>
+              ${currentTab === 'archive'
+            ? `<button onclick="unarchiveArticle(${article.id})" title="Arşivden çıkar">📤</button>`
+            : `<button onclick="archiveArticle(${article.id})" title="Arşive taşı">📦</button>`
+          }
+              <button onclick="deleteArticle(${article.id})" class="btn-delete" title="Makaleyi sil">🗑️</button>
+            </div>
+          </article>
+        `).join('');
+
+      } catch (error) {
+        listEl.innerHTML = `<div class="error">❌ Hata: ${error.message}</div>`;
+      }
+    }
+
+    // Sayıları güncelle
+    async function updateCounts() {
+      try {
+        const [articlesRes, archiveRes] = await Promise.all([
+          fetch(`${API_BASE}/api/articles`),
+          fetch(`${API_BASE}/api/archived`)
+        ]);
+        const articlesData = await articlesRes.json();
+        const archiveData = await archiveRes.json();
+
+        document.getElementById('articlesCount').textContent = articlesData.articles?.length || 0;
+        document.getElementById('archiveCount').textContent = archiveData.articles?.length || 0;
+      } catch (error) {
+        console.error('Sayılar güncellenemedi:', error);
+      }
+    }
+
+    // URL kaydet
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const urlInput = document.getElementById('urlInput');
+      const submitBtn = document.getElementById('submitBtn');
+      const messageEl = document.getElementById('message');
+      const url = urlInput.value.trim();
+
+      if (!url) return;
+
+      submitBtn.querySelector('.btn-text').hidden = true;
+      submitBtn.querySelector('.btn-loading').hidden = false;
+      submitBtn.disabled = true;
+      messageEl.hidden = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showMessage('✅ ' + (data.article?.title || 'Makale başarıyla kaydedildi!'), 'success');
+          urlInput.value = '';
+          loadArticles();
+        } else if (data.exists) {
+          showMessage('ℹ️ Bu makale zaten kayıtlı: ' + (data.article?.title || ''), 'info');
+        } else {
+          showMessage('❌ ' + data.error, 'error');
+        }
+
+      } catch (error) {
+        showMessage('❌ Bağlantı hatası: ' + error.message, 'error');
+      } finally {
+        submitBtn.querySelector('.btn-text').hidden = false;
+        submitBtn.querySelector('.btn-loading').hidden = true;
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Arşive taşı
+    async function archiveArticle(id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/article/${id}/archive`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          loadArticles();
+        } else {
+          alert('Hata: ' + data.error);
+        }
+      } catch (error) {
+        alert('Bağlantı hatası: ' + error.message);
+      }
+    }
+
+    // Arşivden çıkar
+    async function unarchiveArticle(id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/article/${id}/unarchive`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          loadArticles();
+        } else {
+          alert('Hata: ' + data.error);
+        }
+      } catch (error) {
+        alert('Bağlantı hatası: ' + error.message);
+      }
+    }
+
+    // Makale sil
+    async function deleteArticle(id) {
+      if (!confirm('Bu makaleyi kalıcı olarak silmek istediğinize emin misiniz?')) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/article/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (data.success) {
+          loadArticles();
+        } else {
+          alert('Silme hatası: ' + data.error);
+        }
+      } catch (error) {
+        alert('Bağlantı hatası: ' + error.message);
+      }
+    }
+
+    // Mesaj göster
+    function showMessage(text, type) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = text;
+      messageEl.className = `message ${type}`;
+      messageEl.hidden = false;
+
+      setTimeout(() => {
+        messageEl.hidden = true;
+      }, 5000);
+    }
+
+    // Yardımcı fonksiyonlar
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 86400000 && date.getDate() === now.getDate()) {
+        return 'Bugün ' + date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (date.getDate() === yesterday.getDate()) {
+        return 'Dün ' + date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      return date.toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+
+    // Sayfa yüklendiğinde
+    loadArticles();
+  </script>
+</body>
+
+</html>

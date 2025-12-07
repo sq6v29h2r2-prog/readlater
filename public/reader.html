@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Okuma - ReadLater</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        /* Kontrol grupları */
+        .reader-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+
+        .control-group label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+        }
+
+        .ctrl-btn {
+            min-width: 32px;
+            height: 32px;
+            padding: 0 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .ctrl-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* Font butonları */
+        .font-btn[data-font="helvetica"] {
+            font-family: Helvetica, Arial, sans-serif;
+        }
+
+        .font-btn[data-font="georgia"] {
+            font-family: Georgia, serif;
+        }
+
+        .font-btn[data-font="avenir"] {
+            font-family: 'Avenir Next', Avenir, sans-serif;
+        }
+
+        .size-display {
+            min-width: 28px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        /* Font sınıfları */
+        .reader-body.font-helvetica {
+            font-family: Helvetica, Arial, sans-serif;
+        }
+
+        .reader-body.font-georgia {
+            font-family: Georgia, 'Times New Roman', serif;
+        }
+
+        .reader-body.font-avenir {
+            font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+        }
+
+        /* Genişlik modları - DÜZENLENDI */
+        .reader-content.width-narrow {
+            max-width: 600px;
+        }
+
+        .reader-content.width-normal {
+            max-width: 720px;
+        }
+
+        .reader-content.width-wide {
+            max-width: 900px;
+        }
+
+        /* === TEMA SEÇENEKLERİ === */
+
+        /* Siyah Tema */
+        body.theme-black {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #1a1a1a;
+            --bg-glass: rgba(0, 0, 0, 0.9);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #707070;
+            --border: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Gri Tema (varsayılan) */
+        body.theme-gray {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-glass: rgba(13, 17, 23, 0.9);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Sepya Tema */
+        body.theme-sepia {
+            --bg-primary: #f4ecd8;
+            --bg-secondary: #efe6d0;
+            --bg-tertiary: #e5dcc8;
+            --bg-glass: rgba(244, 236, 216, 0.95);
+            --text-primary: #5b4636;
+            --text-secondary: #7a6652;
+            --text-muted: #998b77;
+            --border: rgba(91, 70, 54, 0.15);
+            --border-hover: rgba(91, 70, 54, 0.25);
+        }
+
+        /* Beyaz Tema */
+        body.theme-white {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --bg-glass: rgba(255, 255, 255, 0.95);
+            --text-primary: #1a1a1a;
+            --text-secondary: #495057;
+            --text-muted: #868e96;
+            --border: rgba(0, 0, 0, 0.1);
+            --border-hover: rgba(0, 0, 0, 0.2);
+        }
+
+        /* Tema butonları */
+        .theme-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-btn.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .theme-btn[data-theme="black"] {
+            background: #000000;
+        }
+
+        .theme-btn[data-theme="gray"] {
+            background: #0d1117;
+        }
+
+        .theme-btn[data-theme="sepia"] {
+            background: #f4ecd8;
+        }
+
+        .theme-btn[data-theme="white"] {
+            background: #ffffff;
+        }
+
+        /* Highlight stilleri */
+        .highlight {
+            background: linear-gradient(to bottom, rgba(255, 230, 0, 0.4), rgba(255, 230, 0, 0.3));
+            padding: 0.1em 0;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .highlight:hover {
+            background: linear-gradient(to bottom, rgba(255, 230, 0, 0.6), rgba(255, 230, 0, 0.5));
+        }
+
+        /* Highlight popup */
+        .highlight-popup {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 0.5rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: none;
+        }
+
+        .highlight-popup.visible {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .highlight-popup button {
+            padding: 0.5rem 1rem;
+            background: #ffe600;
+            border: none;
+            border-radius: var(--radius-sm);
+            color: #000;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Highlight modu göstergesi */
+        .highlight-mode-indicator {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffe600;
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            z-index: 100;
+        }
+
+        .highlight-mode-indicator.visible {
+            display: block;
+        }
+
+        /* Not paneli */
+        .notes-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            z-index: 200;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notes-panel.open {
+            right: 0;
+        }
+
+        .notes-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notes-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .notes-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .notes-content {
+            flex: 1;
+            padding: 1rem;
+        }
+
+        .notes-textarea {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            padding: 1rem;
+            resize: none;
+        }
+
+        .notes-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .notes-status {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        /* Tam ekran modu */
+        body.fullscreen-mode .reader-nav {
+            display: none;
+        }
+
+        body.fullscreen-mode .reader-content {
+            padding-top: 2rem;
+        }
+
+        /* Fullscreen göstergesi */
+        .fullscreen-hint {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        body.fullscreen-mode .fullscreen-hint {
+            opacity: 1;
+        }
+
+        @media (max-width: 500px) {
+            .notes-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="reader-page">
+    <nav class="reader-nav">
+        <a href="/" class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Geri
+        </a>
+
+        <div class="reader-controls">
+            <!-- Yazı Tipi -->
+            <div class="control-group">
+                <label>Yazı:</label>
+                <button class="ctrl-btn font-btn active" data-font="helvetica">Helvetica</button>
+                <button class="ctrl-btn font-btn" data-font="georgia">Georgia</button>
+                <button class="ctrl-btn font-btn" data-font="avenir">Avenir Next</button>
+            </div>
+
+            <!-- Yazı Boyutu -->
+            <div class="control-group">
+                <label>Boyut:</label>
+                <button class="ctrl-btn" id="sizeDown">−</button>
+                <span class="size-display" id="sizeDisplay">18</span>
+                <button class="ctrl-btn" id="sizeUp">+</button>
+            </div>
+
+            <!-- Genişlik -->
+            <div class="control-group">
+                <label>Genişlik:</label>
+                <button class="ctrl-btn" id="widthNarrow" title="Dar">S</button>
+                <button class="ctrl-btn active" id="widthNormal" title="Normal">M</button>
+                <button class="ctrl-btn" id="widthWide" title="Geniş">L</button>
+            </div>
+
+            <!-- Tema -->
+            <div class="control-group">
+                <label>Tema:</label>
+                <button class="theme-btn" data-theme="black" title="Siyah"></button>
+                <button class="theme-btn active" data-theme="gray" title="Gri"></button>
+                <button class="theme-btn" data-theme="sepia" title="Sepya"></button>
+                <button class="theme-btn" data-theme="white" title="Beyaz"></button>
+            </div>
+
+            <!-- Highlight -->
+            <div class="control-group">
+                <button class="ctrl-btn" id="highlightToggle" title="Highlight Modu">🖍️</button>
+            </div>
+
+            <!-- Notlar -->
+            <div class="control-group">
+                <button class="ctrl-btn" id="notesToggle" title="Notlar">📝</button>
+            </div>
+
+            <!-- Tam Ekran -->
+            <div class="control-group">
+                <button class="ctrl-btn" id="fullscreenToggle" title="Tam Ekran (F)">⛶</button>
+            </div>
+        </div>
+
+        <div class="reader-actions">
+            <a id="originalLink" href="#" target="_blank" title="Orijinal">🔗</a>
+            <button id="archiveBtn" title="Arşive Taşı">📦</button>
+            <button id="deleteBtn" title="Sil">🗑️</button>
+        </div>
+    </nav>
+
+    <!-- Highlight Popup -->
+    <div class="highlight-popup" id="highlightPopup">
+        <button id="addHighlightBtn">🖍️ Vurgula</button>
+    </div>
+
+    <!-- Highlight Göstergesi -->
+    <div class="highlight-mode-indicator" id="highlightIndicator">🖍️ Highlight Modu - Metin seçin</div>
+
+    <!-- Fullscreen Göstergesi -->
+    <div class="fullscreen-hint">F tuşu ile çık</div>
+
+    <!-- Not Paneli -->
+    <aside class="notes-panel" id="notesPanel">
+        <div class="notes-header">
+            <h3>📝 Notlarım</h3>
+            <button class="notes-close" id="notesClose">×</button>
+        </div>
+        <div class="notes-content">
+            <textarea class="notes-textarea" id="notesTextarea"
+                placeholder="Bu makale hakkında notlarınızı yazın..."></textarea>
+        </div>
+        <div class="notes-status" id="notesStatus"></div>
+    </aside>
+
+    <article class="reader-content width-normal" id="readerContent">
+        <header class="reader-header">
+            <h1 id="articleTitle">Yükleniyor...</h1>
+            <div class="reader-meta">
+                <span id="articleAuthor"></span>
+                <span id="articleSite"></span>
+                <span id="articleDate"></span>
+            </div>
+        </header>
+
+        <div id="articleBody" class="reader-body font-helvetica">
+            <div class="loading">İçerik yükleniyor</div>
+        </div>
+    </article>
+
+    <script>
+        const articleId = window.location.pathname.split('/').pop();
+        const articleBody = document.getElementById('articleBody');
+        const readerContent = document.getElementById('readerContent');
+        const highlightPopup = document.getElementById('highlightPopup');
+        const highlightIndicator = document.getElementById('highlightIndicator');
+        const notesPanel = document.getElementById('notesPanel');
+        const notesTextarea = document.getElementById('notesTextarea');
+        const notesStatus = document.getElementById('notesStatus');
+
+        let highlightMode = false;
+        let notesSaveTimeout = null;
+
+        // === FONT SEÇİCİ ===
+        const fontBtns = document.querySelectorAll('.font-btn');
+        setFont(localStorage.getItem('readlater-font') || 'helvetica');
+
+        fontBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setFont(btn.dataset.font);
+                localStorage.setItem('readlater-font', btn.dataset.font);
+            });
+        });
+
+        function setFont(font) {
+            fontBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector(`.font-btn[data-font="${font}"]`)?.classList.add('active');
+            articleBody.classList.remove('font-helvetica', 'font-georgia', 'font-avenir');
+            articleBody.classList.add(`font-${font}`);
+        }
+
+        // === YAZI BOYUTU ===
+        let fontSize = parseInt(localStorage.getItem('readlater-size')) || 18;
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        setFontSize(fontSize);
+
+        document.getElementById('sizeDown').addEventListener('click', () => {
+            if (fontSize > 12) { fontSize -= 2; setFontSize(fontSize); localStorage.setItem('readlater-size', fontSize); }
+        });
+        document.getElementById('sizeUp').addEventListener('click', () => {
+            if (fontSize < 32) { fontSize += 2; setFontSize(fontSize); localStorage.setItem('readlater-size', fontSize); }
+        });
+
+        function setFontSize(size) {
+            articleBody.style.fontSize = size + 'px';
+            sizeDisplay.textContent = size;
+        }
+
+        // === GENİŞLİK MODU (DÜZELTİLDİ) ===
+        const widthBtns = { narrow: document.getElementById('widthNarrow'), normal: document.getElementById('widthNormal'), wide: document.getElementById('widthWide') };
+        setWidth(localStorage.getItem('readlater-width') || 'normal');
+
+        Object.entries(widthBtns).forEach(([mode, btn]) => {
+            btn.addEventListener('click', () => { setWidth(mode); localStorage.setItem('readlater-width', mode); });
+        });
+
+        function setWidth(mode) {
+            Object.values(widthBtns).forEach(b => b.classList.remove('active'));
+            widthBtns[mode]?.classList.add('active');
+            readerContent.classList.remove('width-narrow', 'width-normal', 'width-wide');
+            readerContent.classList.add(`width-${mode}`);
+        }
+
+        // === TEMA SEÇİCİ ===
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        const savedTheme = localStorage.getItem('readlater-theme') || 'gray';
+        setTheme(savedTheme);
+
+        themeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                setTheme(theme);
+                localStorage.setItem('readlater-theme', theme);
+            });
+        });
+
+        function setTheme(theme) {
+            themeBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector(`.theme-btn[data-theme="${theme}"]`)?.classList.add('active');
+            document.body.classList.remove('theme-black', 'theme-gray', 'theme-sepia', 'theme-white');
+            document.body.classList.add(`theme-${theme}`);
+        }
+
+        // === TAM EKRAN MODU ===
+        const fullscreenToggle = document.getElementById('fullscreenToggle');
+
+        fullscreenToggle.addEventListener('click', toggleFullscreen);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+                    toggleFullscreen();
+                }
+            }
+            if (e.key === 'Escape') {
+                document.body.classList.remove('fullscreen-mode');
+                fullscreenToggle.classList.remove('active');
+            }
+        });
+
+        function toggleFullscreen() {
+            document.body.classList.toggle('fullscreen-mode');
+            fullscreenToggle.classList.toggle('active');
+        }
+
+        // === HIGHLIGHT MODU ===
+        const highlightToggle = document.getElementById('highlightToggle');
+
+        highlightToggle.addEventListener('click', () => {
+            highlightMode = !highlightMode;
+            highlightToggle.classList.toggle('active', highlightMode);
+            highlightIndicator.classList.toggle('visible', highlightMode);
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length > 0 && highlightMode && articleBody.contains(selection.anchorNode)) {
+                highlightPopup.style.left = e.pageX + 'px';
+                highlightPopup.style.top = (e.pageY + 10) + 'px';
+                highlightPopup.classList.add('visible');
+
+                document.getElementById('addHighlightBtn').onclick = async () => {
+                    await addHighlight(selection);
+                    highlightPopup.classList.remove('visible');
+                };
+            } else {
+                highlightPopup.classList.remove('visible');
+            }
+        });
+
+        async function addHighlight(selection) {
+            const text = selection.toString().trim();
+            if (!text) return;
+
+            try {
+                const range = selection.getRangeAt(0);
+                const res = await fetch(`/api/article/${articleId}/highlight`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                if ((await res.json()).success) {
+                    const span = document.createElement('span');
+                    span.className = 'highlight';
+                    span.textContent = text;
+                    range.deleteContents();
+                    range.insertNode(span);
+                    selection.removeAllRanges();
+                }
+            } catch (error) { console.error('Highlight kaydedilemedi:', error); }
+        }
+
+        function applyHighlights(highlights) {
+            if (!highlights || highlights.length === 0) return;
+            let html = articleBody.innerHTML;
+            highlights.forEach(hl => {
+                if (hl.text) {
+                    const escaped = hl.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    html = html.replace(new RegExp(`(${escaped})`, 'g'), `<span class="highlight" data-hl-id="${hl.id}">$1</span>`);
+                }
+            });
+            articleBody.innerHTML = html;
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.addEventListener('click', () => {
+                    if (confirm('Bu vurgulamayı silmek ister misiniz?')) deleteHighlight(el.dataset.hlId, el);
+                });
+            });
+        }
+
+        async function deleteHighlight(hlId, element) {
+            try {
+                const res = await fetch(`/api/article/${articleId}/highlight/${hlId}`, { method: 'DELETE' });
+                if ((await res.json()).success && element) element.replaceWith(element.textContent);
+            } catch (error) { console.error('Highlight silinemedi:', error); }
+        }
+
+        // === NOTLAR ===
+        const notesToggle = document.getElementById('notesToggle');
+        const notesClose = document.getElementById('notesClose');
+
+        notesToggle.addEventListener('click', () => {
+            notesPanel.classList.toggle('open');
+            notesToggle.classList.toggle('active');
+        });
+        notesClose.addEventListener('click', () => {
+            notesPanel.classList.remove('open');
+            notesToggle.classList.remove('active');
+        });
+
+        notesTextarea.addEventListener('input', () => {
+            notesStatus.textContent = 'Kaydediliyor...';
+            clearTimeout(notesSaveTimeout);
+            notesSaveTimeout = setTimeout(saveNotes, 1000);
+        });
+
+        async function saveNotes() {
+            try {
+                const res = await fetch(`/api/article/${articleId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: notesTextarea.value })
+                });
+                if ((await res.json()).success) {
+                    notesStatus.textContent = '✓ Kaydedildi';
+                    setTimeout(() => { notesStatus.textContent = ''; }, 2000);
+                }
+            } catch (error) { notesStatus.textContent = '❌ Hata'; }
+        }
+
+        // === ARŞİV ===
+        document.getElementById('archiveBtn').addEventListener('click', async () => {
+            if (!confirm('Bu makaleyi arşive taşımak istiyor musunuz?')) return;
+            try {
+                const res = await fetch(`/api/article/${articleId}/archive`, { method: 'POST' });
+                if ((await res.json()).success) window.location.href = '/';
+            } catch (error) { alert('Hata: ' + error.message); }
+        });
+
+        // === SİL ===
+        document.getElementById('deleteBtn').addEventListener('click', async () => {
+            if (!confirm('Bu makaleyi kalıcı olarak silmek istediğinize emin misiniz?')) return;
+            try {
+                const res = await fetch(`/api/article/${articleId}`, { method: 'DELETE' });
+                if ((await res.json()).success) window.location.href = '/';
+            } catch (error) { alert('Hata: ' + error.message); }
+        });
+
+        // === MAKALE YÜKLE ===
+        async function loadArticle() {
+            try {
+                const res = await fetch(`/api/article/${articleId}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                const article = data.article;
+                document.getElementById('articleTitle').textContent = article.title || 'Başlıksız';
+                document.title = (article.title || 'Makale') + ' - ReadLater';
+
+                if (article.author) document.getElementById('articleAuthor').innerHTML = `✍️ ${article.author}`;
+                if (article.site_name) document.getElementById('articleSite').innerHTML = `🌐 ${article.site_name}`;
+                if (article.saved_at) {
+                    const date = new Date(article.saved_at);
+                    document.getElementById('articleDate').innerHTML = `📅 ${date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+                }
+
+                document.getElementById('originalLink').href = article.url;
+
+                if (article.content) {
+                    articleBody.innerHTML = article.content;
+                    setFont(localStorage.getItem('readlater-font') || 'helvetica');
+                    setFontSize(parseInt(localStorage.getItem('readlater-size')) || 18);
+                    if (article.highlights?.length > 0) applyHighlights(article.highlights);
+                } else if (article.error) {
+                    articleBody.innerHTML = `<div class="error-box"><h3>⚠️ İçerik alınamadı</h3><p>${article.error}</p><p><a href="${article.url}" target="_blank">Orijinal sayfayı ziyaret edin →</a></p></div>`;
+                } else {
+                    articleBody.innerHTML = '<div class="error">İçerik bulunamadı</div>';
+                }
+
+                // Notları yükle
+                if (article.notes) notesTextarea.value = article.notes;
+
+            } catch (error) {
+                articleBody.innerHTML = `<div class="error-box"><h3>❌ Hata</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        loadArticle();
+    </script>
+</body>
+
+</html>

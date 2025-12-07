@@ -1,0 +1,10 @@
+# Render.com Build Configuration
+# https://render.com/docs/node-express
+
+# Build command
+build:
+  - npm install
+
+# Start command
+start:
+  - npm start

@@ -1,0 +1,45 @@
+{
+    "name": "readlater",
+    "version": "2.0.0",
+    "description": "Basit ve güvenilir ReadLater uygulaması",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage"
+    },
+    "dependencies": {
+        "@mozilla/readability": "^0.5.0",
+        "better-sqlite3": "^12.5.0",
+        "dotenv": "^17.2.3",
+        "express": "^4.18.2",
+        "express-mongo-sanitize": "^2.2.0",
+        "helmet": "^8.1.0",
+        "hpp": "^0.2.3",
+        "joi": "^18.0.2",
+        "jsdom": "^23.0.1",
+        "node-cache": "^5.1.2",
+        "node-fetch": "^2.7.0",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.1",
+        "winston": "^3.19.0",
+        "xss-clean": "^0.1.4"
+    },
+    "devDependencies": {
+        "jest": "^30.2.0",
+        "supertest": "^7.1.4"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "keywords": [
+        "readlater",
+        "pocket",
+        "instapaper",
+        "article",
+        "reader"
+    ],
+    "license": "MIT"
+}
