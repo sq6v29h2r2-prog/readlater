@@ -16,6 +16,7 @@ const allowedOrigins = [
     'http://readinglater.com',
     'http://readinglater.com:3000',
     'https://readinglater.com',
+    'https://readlater.onrender.com',
     // Extension'lar için
     'moz-extension://*',
     'chrome-extension://*'

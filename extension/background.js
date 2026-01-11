@@ -1,7 +1,8 @@
 // ReadLater Extension - Background Script (Manifest V3)
 // Sağ tık menüsü ile kaydetme (HTML içerik destekli)
 
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'https://readlater.onrender.com';
+const API_KEY = 'xwUa/mDxr1sqaRVcChh7+oYGM/CX8pxM8ljVtZlsaKo=';
 
 // Browser API uyumluluk (Firefox/Chrome)
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
@@ -57,7 +58,10 @@ async function makeRequest(endpoint, body, fallbackTitle) {
     try {
         const response = await fetch(`${SERVER_URL}${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            },
             body: JSON.stringify(body)
         });
 
