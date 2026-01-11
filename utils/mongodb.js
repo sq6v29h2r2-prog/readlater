@@ -11,7 +11,9 @@ const connectDB = async () => {
     }
 
     try {
-        await mongoose.connect(config.mongodbUri);
+        await mongoose.connect(config.mongodbUri, {
+            family: 4 // IPv4 zorla (Render + Atlas DNS sorunları için)
+        });
         logger.info('MongoDB bağlantısı başarılı');
         lastError = null;
     } catch (error) {
