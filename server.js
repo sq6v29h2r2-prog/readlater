@@ -26,9 +26,6 @@ const { articleRoutes, pageRoutes, healthRoutes } = require('./routes');
 const connectDB = require('./utils/mongodb');
 connectDB();
 
-console.log(`[STARTUP] Sunucu başlatılıyor... PORT: ${config.port}, NODE_ENV: ${config.env}`);
-console.log(`[STARTUP] MongoDB URI: ${config.mongodbUri ? 'TANIMLI' : 'TANIMLI DEĞİL'}`);
-
 const app = express();
 let server;
 
