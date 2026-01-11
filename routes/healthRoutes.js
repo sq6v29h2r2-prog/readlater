@@ -15,9 +15,13 @@ const config = require('../config');
  *       200:
  *         description: Sunucu çalışıyor
  */
+const mongoose = require('mongoose');
+
 router.get('/health', (req, res) => {
     res.json({
         status: 'ok',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        dbState: mongoose.connection.readyState, // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
         timestamp: new Date().toISOString(),
         uptime: Math.floor(process.uptime()),
         environment: config.env,
