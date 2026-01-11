@@ -108,7 +108,7 @@ router.post('/article/:id/unarchive', asyncHandler(async (req, res) => {
 
 // Okunmadı işaretle
 router.post('/article/:id/unread', asyncHandler(async (req, res) => {
-    const result = articleRepository.unmarkAsRead(req.params.id);
+    const result = await articleRepository.unmarkAsRead(req.params.id);
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
@@ -118,7 +118,7 @@ router.post('/article/:id/unread', asyncHandler(async (req, res) => {
 // Highlight ekle
 router.post('/article/:id/highlight', validate(schemas.highlight), asyncHandler(async (req, res) => {
     const { text, color } = req.body;
-    const result = articleRepository.addHighlight(req.params.id, text, color || 'yellow');
+    const result = await articleRepository.addHighlight(req.params.id, text, color || 'yellow');
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
@@ -127,7 +127,7 @@ router.post('/article/:id/highlight', validate(schemas.highlight), asyncHandler(
 
 // Highlight sil
 router.delete('/article/:id/highlight/:highlightId', asyncHandler(async (req, res) => {
-    const result = articleRepository.removeHighlight(req.params.id, req.params.highlightId);
+    const result = await articleRepository.removeHighlight(req.params.id, req.params.highlightId);
     if (!result.success) {
         throw new NotFoundError('Highlight bulunamadı');
     }
@@ -137,7 +137,7 @@ router.delete('/article/:id/highlight/:highlightId', asyncHandler(async (req, re
 // Not kaydet
 router.post('/article/:id/notes', validate(schemas.notes), asyncHandler(async (req, res) => {
     const { notes } = req.body;
-    const result = articleRepository.saveNotes(req.params.id, notes);
+    const result = await articleRepository.saveNotes(req.params.id, notes);
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }

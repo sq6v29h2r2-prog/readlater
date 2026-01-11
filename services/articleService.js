@@ -19,6 +19,11 @@ async function saveArticleFromUrl(url) {
 
     const article = await fetchAndParse(url);
 
+    // Auto Lazy Load for Images
+    if (article.content) {
+        article.content = article.content.replace(/<img /g, '<img loading="lazy" ');
+    }
+
     const result = await articleRepository.create({
         url,
         title: article.title,
@@ -34,7 +39,7 @@ async function saveArticleFromUrl(url) {
     return {
         success: true,
         article: {
-            id: result.lastInsertRowid,
+            id: result.lastInsertRowid || result.article?.id,
             title: article.title,
             siteName: article.siteName
         }
@@ -51,6 +56,11 @@ async function saveArticleFromHtml(url, html) {
 
     const article = parseHtml(html, url);
 
+    // Auto Lazy Load for Images
+    if (article.content) {
+        article.content = article.content.replace(/<img /g, '<img loading="lazy" ');
+    }
+
     const result = await articleRepository.create({
         url,
         title: article.title,
@@ -66,7 +76,7 @@ async function saveArticleFromHtml(url, html) {
     return {
         success: true,
         article: {
-            id: result.lastInsertRowid,
+            id: result.lastInsertRowid || result.article?.id,
             title: article.title,
             siteName: article.siteName
         }

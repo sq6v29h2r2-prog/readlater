@@ -19,9 +19,13 @@ class MongoArticleRepository {
 
     async create(articleData) {
         try {
+            // MongoDB ID handling - ensure we have a string ID if not provided
+            if (!articleData.id) {
+                articleData.id = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+            }
             const article = new Article(articleData);
             const saved = await article.save();
-            return { lastInsertRowid: saved.id, article: saved };
+            return { success: true, lastInsertRowid: saved.id, article: saved };
         } catch (error) {
             // MongoDB duplicate key error check (11000)
             if (error.code === 11000) {
@@ -48,7 +52,43 @@ class MongoArticleRepository {
     }
 
     async markAsRead(id) {
-        return await Article.updateOne({ id: String(id) }, { read_at: new Date() });
+        const result = await Article.updateOne({ id: String(id) }, { read_at: new Date() });
+        return { success: result.modifiedCount > 0 || result.matchedCount > 0 };
+    }
+
+    async unmarkAsRead(id) {
+        const result = await Article.updateOne({ id: String(id) }, { read_at: null });
+        return { success: result.modifiedCount > 0 || result.matchedCount > 0 };
+    }
+
+    async addHighlight(articleId, text, color) {
+        const article = await this.findById(articleId);
+        if (!article) return { success: false };
+
+        const highlightId = Date.now().toString();
+        const highlight = { id: highlightId, text, color, created_at: new Date().toISOString() };
+
+        if (!article.highlights) article.highlights = [];
+        article.highlights.push(highlight);
+
+        // Mongoose doesn't always track nested shifts in mixed arrays if schema isn't strictly defined for them
+        // But here we rely on the schema or markModified if needed.
+        // Let's assume schema has highlights or we use Article.updateOne with $push
+        await Article.updateOne({ id: String(articleId) }, { $push: { highlights: highlight } });
+        return { success: true, highlight };
+    }
+
+    async removeHighlight(articleId, highlightId) {
+        const result = await Article.updateOne(
+            { id: String(articleId) },
+            { $pull: { highlights: { id: String(highlightId) } } }
+        );
+        return { success: result.modifiedCount > 0 };
+    }
+
+    async saveNotes(articleId, notes) {
+        const result = await Article.updateOne({ id: String(articleId) }, { notes });
+        return { success: result.modifiedCount > 0 || result.matchedCount > 0 };
     }
 
     async findOne(filter) {

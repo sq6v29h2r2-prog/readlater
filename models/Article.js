@@ -14,6 +14,15 @@ const articleSchema = new mongoose.Schema({
     saved_at: { type: Date, default: Date.now },
     read_at: { type: Date },
     is_archived: { type: Boolean, default: false },
+    highlights: [
+        {
+            id: { type: String },
+            text: { type: String },
+            color: { type: String },
+            created_at: { type: String }
+        }
+    ],
+    notes: { type: String },
     error: { type: String }
 });
 
