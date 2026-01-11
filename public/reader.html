@@ -115,17 +115,45 @@
             font-size: 0.75rem;
         }
 
-        /* Font sınıfları - Force specificity */
-        .reader-body.font-helvetica {
+        /* Font sınıfları - Recursive Force specificity */
+        .reader-body.font-helvetica,
+        .reader-body.font-helvetica * {
             font-family: Helvetica, Arial, sans-serif !important;
         }
 
-        .reader-body.font-georgia {
+        .reader-body.font-georgia,
+        .reader-body.font-georgia * {
             font-family: Georgia, 'Times New Roman', serif !important;
         }
 
-        .reader-body.font-avenir {
+        .reader-body.font-avenir,
+        .reader-body.font-avenir * {
             font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif !important;
+        }
+
+        /* Font Size Enforcement */
+        .reader-body {
+            --reader-font-size: 18px;
+            --reader-line-height: 1.6;
+        }
+
+        .reader-body,
+        .reader-body p,
+        .reader-body div,
+        .reader-body span,
+        .reader-body li {
+            font-size: var(--reader-font-size) !important;
+            line-height: var(--reader-line-height) !important;
+        }
+
+        .reader-body h1,
+        .reader-body h2 {
+            font-size: calc(var(--reader-font-size) * 1.5) !important;
+        }
+
+        .reader-body h3,
+        .reader-body h4 {
+            font-size: calc(var(--reader-font-size) * 1.2) !important;
         }
 
         /* Genişlik modları - Force specificity */
@@ -626,7 +654,7 @@
         </header>
 
         <div id="articleBody" class="reader-body font-helvetica"
-            style="transition: font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1), font-family 0.3s cubic-bezier(0.4, 0, 0.2, 1), line-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+            style="--reader-font-size: 18px; transition: font-family 0.3s ease, font-size 0.3s ease;">
             <div class="loading">İçerik yükleniyor</div>
         </div>
     </article>
@@ -693,7 +721,8 @@
         });
 
         function setFontSize(size, notify = false) {
-            articleBody.style.fontSize = size + 'px';
+            articleBody.style.setProperty('--reader-font-size', size + 'px');
+            articleBody.style.setProperty('--reader-line-height', (1.4 + (size / 100))); // Dinamik satır arası
             sizeDisplay.textContent = size;
             if (notify) showToast('Yazı boyutu güncellendi');
         }
