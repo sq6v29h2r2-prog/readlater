@@ -52,6 +52,11 @@
             color: var(--text-primary);
         }
 
+        .ctrl-btn:active {
+            transform: scale(0.9) !important;
+            background: var(--accent-glow) !important;
+        }
+
         .ctrl-btn.active {
             background: var(--accent);
             border-color: var(--accent);
@@ -220,6 +225,10 @@
 
         .theme-btn:hover {
             transform: scale(1.1);
+        }
+
+        .theme-btn:active {
+            transform: scale(0.8) !important;
         }
 
         .theme-btn.active {
@@ -480,19 +489,23 @@
         /* Toast Message */
         .toast {
             position: fixed;
-            bottom: 2rem;
+            bottom: 3rem;
             left: 50%;
-            transform: translateX(-50%) translateY(100px);
+            transform: translateX(-50%) translateY(120px);
             background: var(--accent);
             color: white;
-            padding: 0.6rem 1.2rem;
+            padding: 0.8rem 1.6rem;
             border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: var(--shadow-lg);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: 1rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 2000;
             pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
         }
 
         .toast.visible {
@@ -599,7 +612,8 @@
     </aside>
 
     <!-- Toast Message Container -->
-    <div id="toast" class="toast">Ayar kaydedildi</div>
+    <!-- Toast Message Container -->
+    <div id="toast" class="toast">✓ Ayar kaydedildi</div>
 
     <article class="reader-content width-normal" id="readerContent">
         <header class="reader-header">
@@ -611,7 +625,8 @@
             </div>
         </header>
 
-        <div id="articleBody" class="reader-body font-helvetica">
+        <div id="articleBody" class="reader-body font-helvetica"
+            style="transition: font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1), font-family 0.3s cubic-bezier(0.4, 0, 0.2, 1), line-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="loading">İçerik yükleniyor</div>
         </div>
     </article>
@@ -635,8 +650,14 @@
         // === TOAST FEEDBACK ===
         function showToast(message) {
             const toast = document.getElementById('toast');
-            toast.textContent = message;
+            toast.innerHTML = `<span>✓</span> ${message}`;
             toast.classList.add('visible');
+
+            // Haptic feedback (if supported)
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate(20);
+            }
+
             setTimeout(() => toast.classList.remove('visible'), 2000);
         }
 
@@ -953,8 +974,8 @@
 
                 if (article.content) {
                     articleBody.innerHTML = article.content;
-                    setFont(localStorage.getItem('readlater-font') || 'helvetica');
-                    setFontSize(parseInt(localStorage.getItem('readlater-size')) || 18);
+                    setFont(localStorage.getItem('readlater-font') || 'helvetica', false);
+                    setFontSize(parseInt(localStorage.getItem('readlater-size')) || 18, false);
                     if (article.highlights?.length > 0) applyHighlights(article.highlights);
                 } else if (article.error) {
                     articleBody.innerHTML = `<div class="error-box"><h3>⚠️ İçerik alınamadı</h3><p>${article.error}</p><p><a href="${article.url}" target="_blank">Orijinal sayfayı ziyaret edin →</a></p></div>`;
