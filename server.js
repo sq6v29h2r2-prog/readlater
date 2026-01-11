@@ -26,6 +26,9 @@ const { articleRoutes, pageRoutes, healthRoutes } = require('./routes');
 const connectDB = require('./utils/mongodb');
 connectDB();
 
+console.log(`[STARTUP] Sunucu başlatılıyor... PORT: ${config.port}, NODE_ENV: ${config.env}`);
+console.log(`[STARTUP] MongoDB URI: ${config.mongodbUri ? 'TANIMLI' : 'TANIMLI DEĞİL'}`);
+
 const app = express();
 let server;
 
@@ -144,12 +147,11 @@ const startServer = () => {
         server = http.createServer(app);  // ← DÜZELTİLDİ (eskisi: server = app)
     }
 
-    server.listen(config.port, '0.0.0.0', () => {
+    server.listen(config.port, () => {
         logger.info('Sunucu başlatıldı', {
             port: config.port,
             env: config.env,
-            https: isHttps,
-            host: '0.0.0.0'
+            https: isHttps
         });
 
         console.log(`
