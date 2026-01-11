@@ -16,12 +16,14 @@ const config = require('../config');
  *         description: Sunucu çalışıyor
  */
 const mongoose = require('mongoose');
+const connectDB = require('../utils/mongodb');
 
 router.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        dbState: mongoose.connection.readyState, // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
+        dbError: connectDB.getLastError(),
+        dbState: mongoose.connection.readyState,
         timestamp: new Date().toISOString(),
         uptime: Math.floor(process.uptime()),
         environment: config.env,
