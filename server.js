@@ -2,6 +2,7 @@
 
 const express = require('express');
 const path = require('path');
+const http = require('http');    // ← EKLENDİ
 const https = require('https');
 const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
@@ -21,8 +22,21 @@ const { errorHandler } = require('./middlewares/errorHandler');
 // Routes
 const { articleRoutes, pageRoutes, healthRoutes } = require('./routes');
 
+// Database
+const connectDB = require('./utils/mongodb');
+connectDB();
+
 const app = express();
 let server;
+
+// === VERBOSE REQUEST LOGGER (Hata tespiti için) ===
+app.use((req, res, next) => {
+    const timestamp = new Date().toLocaleTimeString();
+    res.on('finish', () => {
+        console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - ${res.statusCode} - IP: ${req.ip} - Origin: ${req.headers.origin || 'none'}`);
+    });
+    next();
+});
 
 // === SECURITY MIDDLEWARE STACK ===
 
@@ -36,9 +50,6 @@ app.use(hppProtection);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// XSS Sanitization (HTML alanları korunarak)
-app.use(selectiveSanitizer);
-
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -50,6 +61,7 @@ app.use(rateLimiter);
 
 // API key auth
 app.use(apiKeyAuth);
+
 
 // === SWAGGER DOCS ===
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -129,14 +141,15 @@ const startServer = () => {
         logger.info('HTTPS modu aktif');
     } else {
         // HTTP Server
-        server = app;
+        server = http.createServer(app);  // ← DÜZELTİLDİ (eskisi: server = app)
     }
 
-    server.listen(config.port, () => {
+    server.listen(config.port, '0.0.0.0', () => {
         logger.info('Sunucu başlatıldı', {
             port: config.port,
             env: config.env,
-            https: isHttps
+            https: isHttps,
+            host: '0.0.0.0'
         });
 
         console.log(`

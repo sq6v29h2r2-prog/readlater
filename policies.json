@@ -1,0 +1,11 @@
+{
+    "policies": {
+        "ExtensionSettings": {
+            "readlater@local.extension": {
+                "installation_mode": "normal_installed",
+                "install_url": "file:///C:/Users/Yiğit/.gemini/antigravity/scratch/ReadLater/ReadLater_Extension_V3.zip"
+            }
+        },
+        "DisableAppUpdate": false
+    }
+}

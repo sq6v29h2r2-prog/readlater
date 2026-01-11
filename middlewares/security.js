@@ -11,18 +11,10 @@ const helmet = require('helmet');
  * - Content-Security-Policy
  */
 const helmetMiddleware = helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // Swagger için
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "http://localhost:*"]
-        }
-    },
-    crossOriginEmbedderPolicy: false, // Swagger UI için
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    contentSecurityPolicy: false, // CSP devre dışı - yerel uygulama için
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    hsts: false
 });
 
 /**
@@ -44,13 +36,12 @@ function xssSanitizer(req, res, next) {
 function sanitizeObject(obj) {
     for (const key in obj) {
         if (typeof obj[key] === 'string') {
-            // Tehlikeli karakterleri escape et
+            // Tehlikeli karakterleri escape et (URL'leri bozmamak için "/" hariç)
             obj[key] = obj[key]
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#x27;')
-                .replace(/\//g, '&#x2F;');
+                .replace(/'/g, '&#x27;');
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
             sanitizeObject(obj[key]);
         }
@@ -62,8 +53,8 @@ function sanitizeObject(obj) {
  * (content alanı için XSS temizleme yapma)
  */
 function selectiveSanitizer(req, res, next) {
-    // HTML içerik alanlarını koru
-    const htmlFields = ['html', 'content'];
+    // HTML içerik alanlarını ve URL'leri koru (sanitize etme)
+    const htmlFields = ['html', 'content', 'url'];
     const preserved = {};
 
     htmlFields.forEach(field => {

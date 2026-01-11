@@ -1,15 +1,25 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
     "name": "ReadLater",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "Makaleleri tek tıkla kaydet - Paywall bypass",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "readlater@local.extension",
+            "strict_min_version": "109.0"
+        }
+    },
     "permissions": [
         "activeTab",
         "contextMenus",
         "tabs",
+        "notifications",
+        "scripting"
+    ],
+    "host_permissions": [
         "<all_urls>"
     ],
-    "browser_action": {
+    "action": {
         "default_popup": "popup.html",
         "default_icon": {
             "16": "icon16.png",
@@ -21,7 +31,7 @@
         "scripts": [
             "background.js"
         ],
-        "persistent": false
+        "type": "module"
     },
     "icons": {
         "16": "icon16.png",

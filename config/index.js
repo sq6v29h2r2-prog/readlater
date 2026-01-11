@@ -18,6 +18,9 @@ const config = {
         maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
     },
 
+    // Databaes
+    mongodbUri: process.env.MONGODB_URI,
+
     // Paths
     paths: {
         public: 'public',

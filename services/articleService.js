@@ -6,14 +6,20 @@ const { fetchAndParse, parseHtml } = require('./contentService');
 // URL'den makale kaydet
 async function saveArticleFromUrl(url) {
     // Önce var mı kontrol et
-    const existing = articleRepository.findByUrl(url);
+    const existing = await articleRepository.findByUrl(url);
     if (existing) {
-        return { exists: true, article: existing };
+        // Eğer mevcut kayıt hatalıysa, sil ve yeniden dene
+        if (existing.error) {
+            console.log(`[SAVE] Hatalı kayıt bulundu, yeniden deneniyor: ${url}`);
+            await articleRepository.delete(existing.id);
+        } else {
+            return { exists: true, article: existing };
+        }
     }
 
     const article = await fetchAndParse(url);
 
-    const result = articleRepository.create({
+    const result = await articleRepository.create({
         url,
         title: article.title,
         content: article.content,
@@ -38,14 +44,14 @@ async function saveArticleFromUrl(url) {
 // HTML'den makale kaydet (extension'dan)
 async function saveArticleFromHtml(url, html) {
     // Önce var mı kontrol et
-    const existing = articleRepository.findByUrl(url);
+    const existing = await articleRepository.findByUrl(url);
     if (existing) {
         return { exists: true, article: existing };
     }
 
     const article = parseHtml(html, url);
 
-    const result = articleRepository.create({
+    const result = await articleRepository.create({
         url,
         title: article.title,
         content: article.content,
@@ -68,8 +74,8 @@ async function saveArticleFromHtml(url, html) {
 }
 
 // Hatalı makale kaydet
-function saveErrorArticle(url, errorMessage) {
-    return articleRepository.create({
+async function saveErrorArticle(url, errorMessage) {
+    return await articleRepository.create({
         url,
         title: `Hata: ${new URL(url).hostname}`,
         content: null,

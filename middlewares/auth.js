@@ -11,8 +11,15 @@ function apiKeyAuth(req, res, next) {
 
     const apiKey = req.headers['x-api-key'] || req.query.apiKey;
 
-    // Extension ve tarayıcı istekleri için API key kontrolünü atla (localhost)
-    const isLocalRequest = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    // Extension ve tarayıcı istekleri için API key kontrolünü atla (localhost + yerel ağ + Tailscale)
+    const clientIP = req.ip || '';
+    const isLocalRequest =
+        clientIP === '127.0.0.1' ||
+        clientIP === '::1' ||
+        clientIP.includes('127.0.0.1') ||
+        clientIP.includes('192.168.') ||   // Yerel ağ
+        clientIP.includes('10.') ||         // Özel ağ
+        clientIP.includes('100.');          // Tailscale (Kalıcı kolaylık için yerel ağlara izin ver)
 
     if (isLocalRequest) {
         return next();

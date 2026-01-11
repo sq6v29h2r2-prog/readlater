@@ -6,6 +6,7 @@
     "scripts": {
         "start": "node server.js",
         "dev": "node server.js",
+        "migrate:mongo": "node migrate-to-mongo.js",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage"
@@ -20,6 +21,7 @@
         "hpp": "^0.2.3",
         "joi": "^18.0.2",
         "jsdom": "^23.0.1",
+        "mongoose": "^9.1.2",
         "node-cache": "^5.1.2",
         "node-fetch": "^2.7.0",
         "swagger-jsdoc": "^6.2.8",

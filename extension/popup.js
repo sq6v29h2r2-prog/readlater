@@ -1,7 +1,10 @@
-// ReadLater Extension - Popup Script v2.0
-// Tarayıcıdan HTML göndererek paywall bypass
+// ReadLater Extension - Popup Script v3.0
+// Manifest V3 uyumlu - Scripting API
 
 const SERVER_URL = 'http://localhost:3000';
+
+// Browser API uyumluluk (Firefox/Chrome)
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 
 let currentUrl = '';
 let currentTabId = null;
@@ -13,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlDisplay = document.getElementById('urlDisplay');
 
     try {
-        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
 
         if (tabs.length === 0) {
             throw new Error('Aktif sekme bulunamadı');
@@ -52,16 +55,17 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     saveBtn.disabled = true;
 
     try {
-        // Aktif sekmeden HTML al
+        // Aktif sekmeden HTML al - Manifest V3 scripting API
         let html = '';
 
         try {
-            const results = await browser.tabs.executeScript(currentTabId, {
-                code: `document.documentElement.outerHTML`
+            const results = await browserAPI.scripting.executeScript({
+                target: { tabId: currentTabId },
+                func: () => document.documentElement.outerHTML
             });
 
-            if (results && results.length > 0 && results[0]) {
-                html = results[0];
+            if (results && results.length > 0 && results[0].result) {
+                html = results[0].result;
                 console.log('HTML alındı:', html.length, 'karakter');
             }
         } catch (scriptError) {
@@ -87,12 +91,15 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         if (data.success) {
             statusEl.textContent = '✅ ' + (data.article?.title || 'Kaydedildi!');
             statusEl.className = 'status success';
+            showNotification('Kaydedildi! ✅', data.article?.title || 'Makale başarıyla eklendi');
         } else if (data.exists) {
             statusEl.textContent = 'ℹ️ Zaten kayıtlı';
             statusEl.className = 'status info';
+            showNotification('Zaten Kayıtlı', data.article?.title || 'Bu makale zaten listenizde');
         } else {
             statusEl.textContent = '❌ ' + data.error;
             statusEl.className = 'status error';
+            showNotification('Hata ❌', data.error);
             saveBtn.disabled = false;
         }
 
@@ -107,3 +114,13 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         saveBtn.disabled = false;
     }
 });
+
+// Bildirim göster
+function showNotification(title, message) {
+    browserAPI.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon48.png',
+        title: title,
+        message: message
+    });
+}

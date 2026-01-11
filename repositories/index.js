@@ -1,6 +1,9 @@
-// repositories/index.js - Repository'lerin export edildiği ana dosya
+const config = require('../config');
 
-const articleRepository = require('./ArticleRepository');
+// MongoDB ayarı varsa Mongo repository'yi kullan
+const articleRepository = config.mongodbUri
+    ? require('./mongoArticleRepository')
+    : require('./ArticleRepository');
 
 module.exports = {
     articleRepository

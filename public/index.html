@@ -128,7 +128,13 @@
     <!-- Üst Navbar -->
     <nav class="top-nav">
       <a href="/" class="brand">📖 Reader</a>
-      <button class="refresh-btn" onclick="location.reload()">🔄 Yenile</button>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="refresh-btn" onclick="downloadBackup()" title="Yedek indir">💾 Yedek</button>
+        <button class="refresh-btn" onclick="triggerRestore()" title="Yedekten geri yükle">📥 Yükle</button>
+        <button class="refresh-btn" onclick="refreshAll()">🔄 Yenile</button>
+        <input type="file" id="restoreFileInput" accept=".json" style="display: none;"
+          onchange="handleRestoreFile(event)">
+      </div>
     </nav>
 
     <header>
@@ -180,8 +186,14 @@
   </div>
 
   <script>
-    const API_BASE = '';
+    // URL'yi otomatik belirle
     let currentTab = 'articles';
+
+    // Sayfayı yenile
+    async function refreshAll() {
+      invalidateCache();
+      await loadArticles();
+    }
 
     // Tab değiştirme
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -212,18 +224,31 @@
       const endpoint = currentTab === 'archive' ? '/api/archived' : '/api/articles';
 
       try {
-        const res = await fetch(`${API_BASE}${endpoint}`);
+        // Tamamen relatif path kullan (başında / ile)
+        const res = await fetch(`${endpoint}?t=${Date.now()}`, {
+          credentials: 'omit'
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
         const data = await res.json();
 
         if (!data.success) {
-          throw new Error(data.error);
+          throw new Error(data.error || 'API Hatası');
         }
 
         // Sayıları güncelle
         updateCounts();
 
+        // Yanıt başarısızsa hata göster
+        if (!data.success) {
+          throw new Error(data.error || 'Veriler alınamadı');
+        }
+
         // Arama filtresi uygula
-        let articles = data.articles;
+        let articles = data.articles || [];
         if (searchQuery) {
           articles = articles.filter(a =>
             (a.title && a.title.toLowerCase().includes(searchQuery)) ||
@@ -261,35 +286,78 @@
             </div>
             <div class="article-actions">
               <a href="${article.url}" target="_blank" class="btn-link" title="Orijinal sayfayı aç">🔗</a>
-              ${currentTab === 'archive'
-            ? `<button onclick="unarchiveArticle(${article.id})" title="Arşivden çıkar">📤</button>`
-            : `<button onclick="archiveArticle(${article.id})" title="Arşive taşı">📦</button>`
+              <button data-action="copy" data-url="${article.url}" title="URL'yi kopyala">📋</button>
+              ${article.read_at && currentTab !== 'archive'
+            ? `<button data-action="unread" data-id="${article.id}" title="Okunmadı olarak işaretle">🔄</button>`
+            : ''
           }
-              <button onclick="deleteArticle(${article.id})" class="btn-delete" title="Makaleyi sil">🗑️</button>
+              ${currentTab === 'archive'
+            ? `<button data-action="unarchive" data-id="${article.id}" title="Arşivden çıkar">📤</button>`
+            : `<button data-action="archive" data-id="${article.id}" title="Arşive taşı">📦</button>`
+          }
+              <button data-action="delete" data-id="${article.id}" class="btn-delete" title="Makaleyi sil">🗑️</button>
             </div>
           </article>
         `).join('');
 
       } catch (error) {
-        listEl.innerHTML = `<div class="error">❌ Hata: ${error.message}</div>`;
+        console.error('Yükleme hatası:', error);
+        listEl.innerHTML = `
+          <div class="error-state">
+            <p>🔴 <strong>Bağlantı Hatası</strong></p>
+            <p style="font-size: 0.8em; color: #666; margin-top: 5px;">
+              Detay: ${error.message}<br>
+              Adres: ${window.location.host}${endpoint}
+            </p>
+            <button onclick="location.reload()" style="margin-top: 10px; padding: 5px 15px; border-radius: 5px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer;">Tekrar Dene</button>
+            <button onclick="testConnection()" style="margin-top: 10px; padding: 5px 15px; border-radius: 5px; border: 1px solid #007bff; background: #007bff; color: white; cursor: pointer;">Ağı Test Et</button>
+          </div>
+        `;
       }
     }
 
-    // Sayıları güncelle
+    // Basit ağ testi
+    async function testConnection() {
+      try {
+        const start = Date.now();
+        const res = await fetch('/health?t=' + start, { credentials: 'omit' });
+        const time = Date.now() - start;
+        const text = await res.text();
+        alert(`✅ BAĞLANTI BAŞARILI!\nUzaklık: ${time}ms\nYanıt: ${text.substring(0, 50)}`);
+      } catch (error) {
+        alert(`❌ BAĞLANTI HATASI!\nDetay: ${error.message}\nSunucuya hiç ulaşılamıyor. Lütfen VPN/Firewall kontrol edin.`);
+      }
+    }
+
+    // Sayıları güncelle (cache ile optimize)
+    let articlesCache = null;
+    let archiveCache = null;
+
     async function updateCounts() {
       try {
-        const [articlesRes, archiveRes] = await Promise.all([
-          fetch(`${API_BASE}/api/articles`),
-          fetch(`${API_BASE}/api/archived`)
-        ]);
-        const articlesData = await articlesRes.json();
-        const archiveData = await archiveRes.json();
+        // Eğer cache yoksa API'den al
+        if (articlesCache === null) {
+          const articlesRes = await fetch(`/api/articles?t=${Date.now()}`, { credentials: 'omit' });
+          const data = await articlesRes.json();
+          articlesCache = data.articles?.length || 0;
+        }
+        if (archiveCache === null) {
+          const archiveRes = await fetch(`/api/archived?t=${Date.now()}`, { credentials: 'omit' });
+          const data = await archiveRes.json();
+          archiveCache = data.articles?.length || 0;
+        }
 
-        document.getElementById('articlesCount').textContent = articlesData.articles?.length || 0;
-        document.getElementById('archiveCount').textContent = archiveData.articles?.length || 0;
+        document.getElementById('articlesCount').textContent = articlesCache;
+        document.getElementById('archiveCount').textContent = archiveCache;
       } catch (error) {
         console.error('Sayılar güncellenemedi:', error);
       }
+    }
+
+    // Cache'i invalidate et (makale ekle/sil/arşivle sonrası)
+    function invalidateCache() {
+      articlesCache = null;
+      archiveCache = null;
     }
 
     // URL kaydet
@@ -309,7 +377,7 @@
       messageEl.hidden = true;
 
       try {
-        const res = await fetch(`${API_BASE}/api/save`, {
+        const res = await fetch(`/api/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
@@ -320,6 +388,7 @@
         if (data.success) {
           showMessage('✅ ' + (data.article?.title || 'Makale başarıyla kaydedildi!'), 'success');
           urlInput.value = '';
+          invalidateCache();
           loadArticles();
         } else if (data.exists) {
           showMessage('ℹ️ Bu makale zaten kayıtlı: ' + (data.article?.title || ''), 'info');
@@ -336,33 +405,81 @@
       }
     });
 
+    // Event delegation for article actions
+    document.getElementById('articleList').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      const url = btn.dataset.url;
+
+      switch (action) {
+        case 'archive':
+          await archiveArticle(id);
+          break;
+        case 'unarchive':
+          await unarchiveArticle(id);
+          break;
+        case 'unread':
+          await unmarkAsRead(id);
+          break;
+        case 'delete':
+          await deleteArticle(id);
+          break;
+        case 'copy':
+          await copyToClipboard(url);
+          break;
+      }
+    });
+
+    // Okunmadı işaretle
+    async function unmarkAsRead(id) {
+      try {
+        const res = await fetch(`/api/article/${id}/unread`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showMessage('🔄 Makale okunmadı olarak işaretlendi', 'success');
+          loadArticles();
+        } else {
+          showMessage('Hata: ' + data.error, 'error');
+        }
+      } catch (error) {
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
+      }
+    }
+
     // Arşive taşı
     async function archiveArticle(id) {
       try {
-        const res = await fetch(`${API_BASE}/api/article/${id}/archive`, { method: 'POST' });
+        const res = await fetch(`/api/article/${id}/archive`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
+          showMessage('📦 Makale arşive taşındı', 'success');
+          invalidateCache();
           loadArticles();
         } else {
-          alert('Hata: ' + data.error);
+          showMessage('Hata: ' + data.error, 'error');
         }
       } catch (error) {
-        alert('Bağlantı hatası: ' + error.message);
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
       }
     }
 
     // Arşivden çıkar
     async function unarchiveArticle(id) {
       try {
-        const res = await fetch(`${API_BASE}/api/article/${id}/unarchive`, { method: 'POST' });
+        const res = await fetch(`/api/article/${id}/unarchive`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
+          showMessage('📤 Makale arşivden çıkarıldı', 'success');
+          invalidateCache();
           loadArticles();
         } else {
-          alert('Hata: ' + data.error);
+          showMessage('Hata: ' + data.error, 'error');
         }
       } catch (error) {
-        alert('Bağlantı hatası: ' + error.message);
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
       }
     }
 
@@ -371,16 +488,28 @@
       if (!confirm('Bu makaleyi kalıcı olarak silmek istediğinize emin misiniz?')) return;
 
       try {
-        const res = await fetch(`${API_BASE}/api/article/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/article/${id}`, { method: 'DELETE' });
         const data = await res.json();
 
         if (data.success) {
+          showMessage('🗑️ Makale silindi', 'success');
+          invalidateCache();
           loadArticles();
         } else {
-          alert('Silme hatası: ' + data.error);
+          showMessage('Silme hatası: ' + data.error, 'error');
         }
       } catch (error) {
-        alert('Bağlantı hatası: ' + error.message);
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
+      }
+    }
+
+    // URL kopyala
+    async function copyToClipboard(url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showMessage('📋 URL kopyalandı!', 'success');
+      } catch (error) {
+        showMessage('Kopyalama hatası: ' + error.message, 'error');
       }
     }
 
@@ -427,7 +556,81 @@
       });
     }
 
-    // Sayfa yüklendiğinde
+    // === BACKUP / RESTORE ===
+
+    // Yedek indir
+    async function downloadBackup() {
+      try {
+        showMessage('💾 Yedek hazırlanıyor...', 'info');
+        const res = await fetch(`/api/backup`);
+        const blob = await res.blob();
+
+        // Dosya olarak indir
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `readlater-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        showMessage('✅ Yedek indirildi!', 'success');
+      } catch (error) {
+        showMessage('❌ Yedekleme hatası: ' + error.message, 'error');
+      }
+    }
+
+    // Geri yükleme dosya seçiciyi tetikle
+    function triggerRestore() {
+      document.getElementById('restoreFileInput').click();
+    }
+
+    // Geri yükleme dosyasını işle
+    async function handleRestoreFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Mod seçimi
+      const mode = confirm('Mevcut verileri koruyarak eklemek için "Tamam", tüm verileri değiştirmek için "İptal" tıklayın.') ? 'merge' : 'replace';
+
+      if (mode === 'replace') {
+        if (!confirm('⚠️ DİKKAT: Tüm mevcut veriler silinecek! Devam etmek istiyor musunuz?')) {
+          event.target.value = '';
+          return;
+        }
+      }
+
+      try {
+        showMessage('📥 Geri yükleme başlatılıyor...', 'info');
+
+        const text = await file.text();
+        const backup = JSON.parse(text);
+
+        const res = await fetch(`/api/restore`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backup, mode })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showMessage(`✅ Geri yükleme tamamlandı! ${data.imported} makale eklendi, ${data.skipped} atlandı.`, 'success');
+          invalidateCache();
+          loadArticles();
+        } else {
+          showMessage('❌ Geri yükleme hatası: ' + data.error, 'error');
+        }
+      } catch (error) {
+        showMessage('❌ Dosya okunamadı veya geçersiz format: ' + error.message, 'error');
+      }
+
+      // Input'ı temizle
+      event.target.value = '';
+    }
+
+    // Sayfa yüklendiginde
     loadArticles();
   </script>
 </body>

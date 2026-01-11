@@ -58,6 +58,38 @@
             color: #fff;
         }
 
+        /* --- Mobile Optimizations --- */
+        @media (max-width: 640px) {
+            .reader-nav {
+                padding: 0.5rem !important;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .reader-controls {
+                justify-content: center;
+                gap: 0.5rem;
+                width: 100%;
+            }
+
+            .ctrl-btn {
+                min-width: 44px;
+                /* Touch target minimum */
+                height: 44px;
+                font-size: 0.9rem;
+            }
+
+            .theme-btn {
+                width: 32px;
+                height: 32px;
+            }
+
+            .control-group label {
+                display: none;
+                /* Alan tasarrufu */
+            }
+        }
+
         /* Font butonları */
         .font-btn[data-font="helvetica"] {
             font-family: Helvetica, Arial, sans-serif;
@@ -78,30 +110,48 @@
             font-size: 0.75rem;
         }
 
-        /* Font sınıfları */
+        /* Font sınıfları - Force specificity */
         .reader-body.font-helvetica {
-            font-family: Helvetica, Arial, sans-serif;
+            font-family: Helvetica, Arial, sans-serif !important;
         }
 
         .reader-body.font-georgia {
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family: Georgia, 'Times New Roman', serif !important;
         }
 
         .reader-body.font-avenir {
-            font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+            font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif !important;
         }
 
-        /* Genişlik modları - DÜZENLENDI */
+        /* Genişlik modları - Force specificity */
         .reader-content.width-narrow {
-            max-width: 600px;
+            max-width: 600px !important;
         }
 
         .reader-content.width-normal {
-            max-width: 720px;
+            max-width: 720px !important;
         }
 
         .reader-content.width-wide {
-            max-width: 900px;
+            max-width: 900px !important;
+        }
+
+        /* Mobile Specific Width Adjustments */
+        @media (max-width: 600px) {
+            .reader-content {
+                padding-left: 1.5rem !important;
+                padding-right: 1.5rem !important;
+            }
+
+            .reader-content.width-narrow {
+                padding-left: 2.5rem !important;
+                padding-right: 2.5rem !important;
+            }
+
+            .reader-content.width-wide {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
         }
 
         /* === TEMA SEÇENEKLERİ === */
@@ -194,15 +244,32 @@
         }
 
         /* Highlight stilleri */
+        /* Multi-color Highlights */
         .highlight {
-            background: linear-gradient(to bottom, rgba(255, 230, 0, 0.4), rgba(255, 230, 0, 0.3));
             padding: 0.1em 0;
             border-radius: 2px;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .highlight.hl-yellow {
+            background: rgba(255, 226, 0, 0.4);
+        }
+
+        .highlight.hl-green {
+            background: rgba(52, 211, 153, 0.4);
+        }
+
+        .highlight.hl-blue {
+            background: rgba(96, 165, 250, 0.4);
+        }
+
+        .highlight.hl-pink {
+            background: rgba(244, 114, 182, 0.4);
         }
 
         .highlight:hover {
-            background: linear-gradient(to bottom, rgba(255, 230, 0, 0.6), rgba(255, 230, 0, 0.5));
+            filter: brightness(1.1);
         }
 
         /* Highlight popup */
@@ -210,27 +277,79 @@
             position: fixed;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 0.5rem;
+            border-radius: 30px;
+            padding: 6px 12px;
             box-shadow: var(--shadow-lg);
             z-index: 1000;
             display: none;
+            align-items: center;
+            gap: 8px;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
 
         .highlight-popup.visible {
             display: flex;
-            gap: 0.5rem;
         }
 
-        .highlight-popup button {
-            padding: 0.5rem 1rem;
-            background: #ffe600;
-            border: none;
-            border-radius: var(--radius-sm);
-            color: #000;
-            font-size: 0.85rem;
-            font-weight: 500;
+        .hl-color-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
             cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .hl-color-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .hl-color-btn.yellow {
+            background: #ffe200;
+        }
+
+        .hl-color-btn.green {
+            background: #34d399;
+        }
+
+        .hl-color-btn.blue {
+            background: #60a5fa;
+        }
+
+        .hl-color-btn.pink {
+            background: #f472b6;
+        }
+
+        .hl-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .hl-delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0 4px;
+            font-size: 1.1rem;
+        }
+
+        .hl-delete-btn:hover {
+            color: var(--error);
         }
 
         /* Highlight modu göstergesi */
@@ -357,6 +476,28 @@
                 right: -100%;
             }
         }
+
+        /* Toast Message */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
+        }
     </style>
 </head>
 
@@ -422,6 +563,7 @@
 
         <div class="reader-actions">
             <a id="originalLink" href="#" target="_blank" title="Orijinal">🔗</a>
+            <button id="unreadBtn" title="Okunmadı Olarak İşaretle">🔄</button>
             <button id="archiveBtn" title="Arşive Taşı">📦</button>
             <button id="deleteBtn" title="Sil">🗑️</button>
         </div>
@@ -429,7 +571,12 @@
 
     <!-- Highlight Popup -->
     <div class="highlight-popup" id="highlightPopup">
-        <button id="addHighlightBtn">🖍️ Vurgula</button>
+        <button class="hl-color-btn yellow" data-color="yellow" title="Sarı"></button>
+        <button class="hl-color-btn green" data-color="green" title="Yeşil"></button>
+        <button class="hl-color-btn blue" data-color="blue" title="Mavi"></button>
+        <button class="hl-color-btn pink" data-color="pink" title="Pembe"></button>
+        <div class="hl-sep"></div>
+        <button class="hl-delete-btn" id="closePopupBtn" title="Kapat">✕</button>
     </div>
 
     <!-- Highlight Göstergesi -->
@@ -451,6 +598,9 @@
         <div class="notes-status" id="notesStatus"></div>
     </aside>
 
+    <!-- Toast Message Container -->
+    <div id="toast" class="toast">Ayar kaydedildi</div>
+
     <article class="reader-content width-normal" id="readerContent">
         <header class="reader-header">
             <h1 id="articleTitle">Yükleniyor...</h1>
@@ -467,7 +617,10 @@
     </article>
 
     <script>
-        const articleId = window.location.pathname.split('/').pop();
+        const articleId = window.location.pathname.split('/').filter(Boolean).pop();
+        if (!articleId || isNaN(articleId)) {
+            console.error('Makale ID tespit edilemedi!');
+        }
         const articleBody = document.getElementById('articleBody');
         const readerContent = document.getElementById('readerContent');
         const highlightPopup = document.getElementById('highlightPopup');
@@ -479,22 +632,31 @@
         let highlightMode = false;
         let notesSaveTimeout = null;
 
+        // === TOAST FEEDBACK ===
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('visible');
+            setTimeout(() => toast.classList.remove('visible'), 2000);
+        }
+
         // === FONT SEÇİCİ ===
         const fontBtns = document.querySelectorAll('.font-btn');
-        setFont(localStorage.getItem('readlater-font') || 'helvetica');
+        setFont(localStorage.getItem('readlater-font') || 'helvetica', false);
 
         fontBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                setFont(btn.dataset.font);
+                setFont(btn.dataset.font, true);
                 localStorage.setItem('readlater-font', btn.dataset.font);
             });
         });
 
-        function setFont(font) {
+        function setFont(font, notify = true) {
             fontBtns.forEach(b => b.classList.remove('active'));
             document.querySelector(`.font-btn[data-font="${font}"]`)?.classList.add('active');
             articleBody.classList.remove('font-helvetica', 'font-georgia', 'font-avenir');
             articleBody.classList.add(`font-${font}`);
+            if (notify) showToast('Yazı tipi değiştirildi');
         }
 
         // === YAZI BOYUTU ===
@@ -503,15 +665,16 @@
         setFontSize(fontSize);
 
         document.getElementById('sizeDown').addEventListener('click', () => {
-            if (fontSize > 12) { fontSize -= 2; setFontSize(fontSize); localStorage.setItem('readlater-size', fontSize); }
+            if (fontSize > 12) { fontSize -= 2; setFontSize(fontSize, true); localStorage.setItem('readlater-size', fontSize); }
         });
         document.getElementById('sizeUp').addEventListener('click', () => {
-            if (fontSize < 32) { fontSize += 2; setFontSize(fontSize); localStorage.setItem('readlater-size', fontSize); }
+            if (fontSize < 32) { fontSize += 2; setFontSize(fontSize, true); localStorage.setItem('readlater-size', fontSize); }
         });
 
-        function setFontSize(size) {
+        function setFontSize(size, notify = false) {
             articleBody.style.fontSize = size + 'px';
             sizeDisplay.textContent = size;
+            if (notify) showToast('Yazı boyutu güncellendi');
         }
 
         // === GENİŞLİK MODU (DÜZELTİLDİ) ===
@@ -519,14 +682,15 @@
         setWidth(localStorage.getItem('readlater-width') || 'normal');
 
         Object.entries(widthBtns).forEach(([mode, btn]) => {
-            btn.addEventListener('click', () => { setWidth(mode); localStorage.setItem('readlater-width', mode); });
+            btn.addEventListener('click', () => { setWidth(mode, true); localStorage.setItem('readlater-width', mode); });
         });
 
-        function setWidth(mode) {
+        function setWidth(mode, notify = false) {
             Object.values(widthBtns).forEach(b => b.classList.remove('active'));
             widthBtns[mode]?.classList.add('active');
             readerContent.classList.remove('width-narrow', 'width-normal', 'width-wide');
             readerContent.classList.add(`width-${mode}`);
+            if (notify) showToast('Genişlik güncellendi');
         }
 
         // === TEMA SEÇİCİ ===
@@ -537,16 +701,17 @@
         themeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const theme = btn.dataset.theme;
-                setTheme(theme);
+                setTheme(theme, true);
                 localStorage.setItem('readlater-theme', theme);
             });
         });
 
-        function setTheme(theme) {
+        function setTheme(theme, notify = false) {
             themeBtns.forEach(b => b.classList.remove('active'));
             document.querySelector(`.theme-btn[data-theme="${theme}"]`)?.classList.add('active');
             document.body.classList.remove('theme-black', 'theme-gray', 'theme-sepia', 'theme-white');
             document.body.classList.add(`theme-${theme}`);
+            if (notify) showToast('Tema değiştirildi');
         }
 
         // === TAM EKRAN MODU ===
@@ -579,25 +744,63 @@
             highlightIndicator.classList.toggle('visible', highlightMode);
         });
 
+        // Helper: Highlight renk paletini göster
+        function showColorPalette(selection, e = null) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+
+            // Eğer event parametresi varsa (sağ tık), mouse pozisyonuna daha yakın yapabiliriz 
+            // ama genel seçim üstünde durması daha şık
+            highlightPopup.style.left = (rect.left + window.scrollX + (rect.width / 2) - 80) + 'px';
+            highlightPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
+            highlightPopup.classList.add('visible');
+
+            // Renk butonlarına listener ekle
+            document.querySelectorAll('.hl-color-btn').forEach(btn => {
+                btn.onclick = async (ev) => {
+                    ev.stopPropagation();
+                    await addHighlight(selection, btn.dataset.color);
+                    highlightPopup.classList.remove('visible');
+                };
+            });
+
+            document.getElementById('closePopupBtn').onclick = () => {
+                highlightPopup.classList.remove('visible');
+                selection.removeAllRanges();
+            };
+        }
+
+        // Mouse bırakınca (Eğer mod açıksa otomatik göster)
         document.addEventListener('mouseup', (e) => {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
 
             if (selectedText.length > 0 && highlightMode && articleBody.contains(selection.anchorNode)) {
-                highlightPopup.style.left = e.pageX + 'px';
-                highlightPopup.style.top = (e.pageY + 10) + 'px';
-                highlightPopup.classList.add('visible');
-
-                document.getElementById('addHighlightBtn').onclick = async () => {
-                    await addHighlight(selection);
-                    highlightPopup.classList.remove('visible');
-                };
-            } else {
+                showColorPalette(selection);
+            } else if (!highlightPopup.contains(e.target)) {
                 highlightPopup.classList.remove('visible');
             }
         });
 
-        async function addHighlight(selection) {
+        // SAĞ TIK ile Highlight Modunu Tetikle (Mod kapalı olsa bile çalışır)
+        document.addEventListener('contextmenu', (e) => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length > 0 && articleBody.contains(selection.anchorNode)) {
+                e.preventDefault(); // Standart sağ tık menüsünü engelle
+                showColorPalette(selection, e);
+
+                // Eğer mod kapalıysa otomatik açabiliriz (isteğe bağlı)
+                if (!highlightMode) {
+                    highlightMode = true;
+                    highlightToggle.classList.add('active');
+                    highlightIndicator.classList.add('visible');
+                }
+            }
+        });
+
+        async function addHighlight(selection, color = 'yellow') {
             const text = selection.toString().trim();
             if (!text) return;
 
@@ -606,34 +809,56 @@
                 const res = await fetch(`/api/article/${articleId}/highlight`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify({ text, color })
                 });
 
-                if ((await res.json()).success) {
+                const data = await res.json();
+                if (data.success) {
                     const span = document.createElement('span');
-                    span.className = 'highlight';
+                    span.className = `highlight hl-${color}`;
+                    span.dataset.hlId = data.highlight?.id;
                     span.textContent = text;
                     range.deleteContents();
                     range.insertNode(span);
                     selection.removeAllRanges();
+
+                    // Yeni eklenen highlight'a silme listener'ı ekle
+                    span.onclick = () => {
+                        if (confirm('Bu vurgulamayı silmek ister misiniz?')) deleteHighlight(span.dataset.hlId, span);
+                    };
+                } else {
+                    alert('Highlight kaydedilirken bir hata oluştu.');
                 }
-            } catch (error) { console.error('Highlight kaydedilemedi:', error); }
+            } catch (error) {
+                console.error('Highlight kaydedilemedi:', error);
+                alert('Highlight kaydedilemedi: Sunucu hatası');
+            }
         }
 
         function applyHighlights(highlights) {
             if (!highlights || highlights.length === 0) return;
             let html = articleBody.innerHTML;
-            highlights.forEach(hl => {
+
+            // Highlightları metin uzunluğuna göre sırala (iç içe geçmemesi için büyükten küçüğe)
+            const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length);
+
+            sorted.forEach(hl => {
                 if (hl.text) {
                     const escaped = hl.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    html = html.replace(new RegExp(`(${escaped})`, 'g'), `<span class="highlight" data-hl-id="${hl.id}">$1</span>`);
+                    const colorClass = `hl-${hl.color || 'yellow'}`;
+                    // Sadece metin düğümlerinde (text nodes) değişiklik yapmak en güvenlisidir ama şimdilik iyileştirilmiş regex kullanalım
+                    // Daha önce değiştirilmiş olanları bozmamak için negatif lookahead/lookbehind gerekebilir
+                    const regex = new RegExp(`(${escaped})(?![^<]*>|[^<>]*<\/span>)`, 'g');
+                    html = html.replace(regex, `<span class="highlight ${colorClass}" data-hl-id="${hl.id}">$1</span>`);
                 }
             });
             articleBody.innerHTML = html;
+
             document.querySelectorAll('.highlight').forEach(el => {
-                el.addEventListener('click', () => {
+                el.onclick = (e) => {
+                    e.stopPropagation();
                     if (confirm('Bu vurgulamayı silmek ister misiniz?')) deleteHighlight(el.dataset.hlId, el);
-                });
+                };
             });
         }
 
@@ -676,6 +901,17 @@
                 }
             } catch (error) { notesStatus.textContent = '❌ Hata'; }
         }
+
+        // === OKUNMADI ===
+        document.getElementById('unreadBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch(`/api/article/${articleId}/unread`, { method: 'POST' });
+                if ((await res.json()).success) {
+                    alert('Makale okunmadı olarak işaretlendi');
+                    window.location.href = '/';
+                }
+            } catch (error) { alert('Hata: ' + error.message); }
+        });
 
         // === ARŞİV ===
         document.getElementById('archiveBtn').addEventListener('click', async () => {

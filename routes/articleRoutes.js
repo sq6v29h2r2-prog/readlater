@@ -53,29 +53,35 @@ router.post('/save-with-content', validate(schemas.saveWithContent), asyncHandle
 
 // Tüm makaleleri listele
 router.get('/articles', asyncHandler(async (req, res) => {
-    const articles = articleRepository.findAll();
+    const articles = await articleRepository.findAll();
     return success(res, { articles });
 }));
 
 // Arşivlenmiş makaleleri listele
 router.get('/archived', asyncHandler(async (req, res) => {
-    const articles = articleRepository.findArchived();
+    const articles = await articleRepository.findArchived();
     return success(res, { articles });
 }));
 
 // Tek makale getir
 router.get('/article/:id', asyncHandler(async (req, res) => {
-    const article = articleRepository.findById(req.params.id);
+    const article = await articleRepository.findById(req.params.id);
     if (!article) {
         throw new NotFoundError('Makale bulunamadı');
     }
-    articleRepository.markAsRead(req.params.id);
+    await articleRepository.markAsRead(req.params.id);
     return success(res, { article });
 }));
 
 // Makale sil
+router.get('/article/:id/delete', asyncHandler(async (req, res) => {
+    // legacy support for GET delete
+    const result = await articleRepository.delete(req.params.id);
+    return res.redirect('/');
+}));
+
 router.delete('/article/:id', asyncHandler(async (req, res) => {
-    const result = articleRepository.delete(req.params.id);
+    const result = await articleRepository.delete(req.params.id);
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
@@ -84,7 +90,7 @@ router.delete('/article/:id', asyncHandler(async (req, res) => {
 
 // Arşive taşı
 router.post('/article/:id/archive', asyncHandler(async (req, res) => {
-    const result = articleRepository.archive(req.params.id);
+    const result = await articleRepository.archive(req.params.id);
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
@@ -93,17 +99,26 @@ router.post('/article/:id/archive', asyncHandler(async (req, res) => {
 
 // Arşivden çıkar
 router.post('/article/:id/unarchive', asyncHandler(async (req, res) => {
-    const result = articleRepository.unarchive(req.params.id);
+    const result = await articleRepository.unarchive(req.params.id);
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
     return success(res, {}, 'Makale arşivden çıkarıldı');
 }));
 
+// Okunmadı işaretle
+router.post('/article/:id/unread', asyncHandler(async (req, res) => {
+    const result = articleRepository.unmarkAsRead(req.params.id);
+    if (!result.success) {
+        throw new NotFoundError('Makale bulunamadı');
+    }
+    return success(res, {}, 'Makale okunmadı olarak işaretlendi');
+}));
+
 // Highlight ekle
 router.post('/article/:id/highlight', validate(schemas.highlight), asyncHandler(async (req, res) => {
-    const { text } = req.body;
-    const result = articleRepository.addHighlight(req.params.id, text);
+    const { text, color } = req.body;
+    const result = articleRepository.addHighlight(req.params.id, text, color || 'yellow');
     if (!result.success) {
         throw new NotFoundError('Makale bulunamadı');
     }
@@ -127,6 +142,42 @@ router.post('/article/:id/notes', validate(schemas.notes), asyncHandler(async (r
         throw new NotFoundError('Makale bulunamadı');
     }
     return success(res, {}, 'Not kaydedildi');
+}));
+
+// === BACKUP / RESTORE ===
+
+// Veritabanı yedeği al
+router.get('/backup', asyncHandler(async (req, res) => {
+    const db = require('../database');
+    const backup = db.exportDatabase();
+
+    // Dosya olarak indir
+    const filename = `readlater-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    logger.info(`[BACKUP] Yedek oluşturuldu: ${backup.stats.articles} makale, ${backup.stats.highlights} highlight`);
+
+    return res.json(backup);
+}));
+
+// Yedekten geri yükle
+router.post('/restore', validate(schemas.restore), asyncHandler(async (req, res) => {
+    const db = require('../database');
+    const { backup, mode } = req.body;
+
+    logger.info(`[RESTORE] Geri yükleme başlatıldı (mod: ${mode})`);
+
+    const result = db.importDatabase(backup, mode);
+
+    logger.info(`[RESTORE] Tamamlandı: ${result.importedArticles} eklendi, ${result.skippedArticles} atlandı`);
+
+    return success(res, {
+        imported: result.importedArticles,
+        skipped: result.skippedArticles,
+        highlights: result.importedHighlights
+    }, `Geri yükleme tamamlandı: ${result.importedArticles} makale eklendi`);
 }));
 
 module.exports = router;

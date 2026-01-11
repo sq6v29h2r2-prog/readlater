@@ -1,10 +1,14 @@
-# Render.com Build Configuration
-# https://render.com/docs/node-express
-
-# Build command
-build:
-  - npm install
-
-# Start command
-start:
-  - npm start
+services:
+  - type: web
+    name: readlater
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: READLATER_API_KEY
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false

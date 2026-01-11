@@ -1,182 +1,248 @@
-// repositories/ArticleRepository.js - Repository Pattern ile veritabanı soyutlaması
+// repositories/ArticleRepository.js - Repository Pattern ile SQLite veritabanı
 
-const fs = require('fs');
+const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'articles.json');
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const DB_PATH = path.join(DATA_DIR, 'articles.db');
 
 class ArticleRepository {
     constructor() {
-        this.dbPath = DB_PATH;
         this.ensureDataDir();
+        this.db = new Database(DB_PATH);
+        this.initDatabase();
+        this.prepareStatements();
     }
 
     // Data klasörünü oluştur
     ensureDataDir() {
-        const dataDir = path.dirname(this.dbPath);
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
         }
     }
 
-    // Veritabanını yükle
-    load() {
-        try {
-            if (fs.existsSync(this.dbPath)) {
-                const data = fs.readFileSync(this.dbPath, 'utf8');
-                return JSON.parse(data);
-            }
-        } catch (error) {
-            console.error('[DB] Veritabanı yüklenirken hata:', error.message);
-        }
-        return { articles: [], nextId: 1 };
+    // Veritabanı tablolarını oluştur
+    initDatabase() {
+        // WAL mode - daha iyi performans
+        this.db.pragma('journal_mode = WAL');
+        this.db.pragma('synchronous = NORMAL');
+
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS articles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT UNIQUE NOT NULL,
+                title TEXT,
+                content TEXT,
+                excerpt TEXT,
+                author TEXT,
+                site_name TEXT,
+                saved_at TEXT DEFAULT (datetime('now', 'localtime')),
+                read_at TEXT,
+                archived_at TEXT,
+                notes TEXT DEFAULT '',
+                error TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS highlights (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                article_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                start_offset INTEGER,
+                end_offset INTEGER,
+                created_at TEXT DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_articles_url ON articles(url);
+            CREATE INDEX IF NOT EXISTS idx_articles_archived ON articles(archived_at);
+            CREATE INDEX IF NOT EXISTS idx_highlights_article ON highlights(article_id);
+        `);
     }
 
-    // Veritabanını kaydet
-    save(db) {
-        fs.writeFileSync(this.dbPath, JSON.stringify(db, null, 2), 'utf8');
+    // Prepared statements (performans için)
+    prepareStatements() {
+        this.statements = {
+            // Article CRUD
+            insert: this.db.prepare(`
+                INSERT INTO articles (url, title, content, excerpt, author, site_name, error)
+                VALUES (@url, @title, @content, @excerpt, @author, @siteName, @error)
+            `),
+
+            findByUrl: this.db.prepare('SELECT * FROM articles WHERE url = ?'),
+
+            findById: this.db.prepare('SELECT * FROM articles WHERE id = ?'),
+
+            findAll: this.db.prepare(`
+                SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
+                FROM articles 
+                WHERE archived_at IS NULL 
+                ORDER BY saved_at DESC
+            `),
+
+            findArchived: this.db.prepare(`
+                SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
+                FROM articles 
+                WHERE archived_at IS NOT NULL 
+                ORDER BY archived_at DESC
+            `),
+
+            delete: this.db.prepare('DELETE FROM articles WHERE id = ?'),
+
+            markAsRead: this.db.prepare(`
+                UPDATE articles SET read_at = datetime('now', 'localtime') WHERE id = ?
+            `),
+
+            archive: this.db.prepare(`
+                UPDATE articles SET archived_at = datetime('now', 'localtime') WHERE id = ?
+            `),
+
+            unarchive: this.db.prepare('UPDATE articles SET archived_at = NULL WHERE id = ?'),
+
+            unmarkAsRead: this.db.prepare(`
+                UPDATE articles SET read_at = NULL WHERE id = ?
+            `),
+
+            updateNotes: this.db.prepare('UPDATE articles SET notes = ? WHERE id = ?'),
+
+            // Highlights
+            addHighlight: this.db.prepare(`
+                INSERT INTO highlights (article_id, text, start_offset, end_offset, color)
+                VALUES (?, ?, ?, ?, ?)
+            `),
+
+            getHighlights: this.db.prepare('SELECT * FROM highlights WHERE article_id = ? ORDER BY created_at'),
+
+            removeHighlight: this.db.prepare('DELETE FROM highlights WHERE id = ? AND article_id = ?')
+        };
     }
 
     // === CRUD İŞLEMLERİ ===
 
     // Tüm makaleleri getir (arşivlenmemiş)
     findAll() {
-        const db = this.load();
-        return db.articles
-            .filter(a => !a.archivedAt)
-            .map(this.toDTO);
+        const articles = this.statements.findAll.all();
+        return articles.map(this.toDTO);
     }
 
     // Arşivlenmiş makaleleri getir
     findArchived() {
-        const db = this.load();
-        return db.articles
-            .filter(a => a.archivedAt)
-            .map(this.toDTO);
+        const articles = this.statements.findArchived.all();
+        return articles.map(this.toDTO);
     }
 
     // ID ile makale bul
     findById(id) {
-        const db = this.load();
-        const article = db.articles.find(a => a.id === parseInt(id));
-        return article ? this.toDetailDTO(article) : null;
+        const article = this.statements.findById.get(parseInt(id));
+        if (!article) return null;
+
+        // Highlights'ları da getir
+        const highlights = this.statements.getHighlights.all(parseInt(id));
+        article.highlights = highlights || [];
+
+        return this.toDetailDTO(article);
     }
 
     // URL ile makale bul
     findByUrl(url) {
-        const db = this.load();
-        return db.articles.find(a => a.url === url);
+        return this.statements.findByUrl.get(url) || null;
     }
 
     // Yeni makale ekle
     create(articleData) {
-        const db = this.load();
+        try {
+            const result = this.statements.insert.run({
+                url: articleData.url,
+                title: articleData.title || null,
+                content: articleData.content || null,
+                excerpt: articleData.excerpt || null,
+                author: articleData.author || null,
+                siteName: articleData.siteName || null,
+                error: articleData.error || null
+            });
 
-        const article = {
-            id: db.nextId++,
-            url: articleData.url,
-            title: articleData.title || null,
-            content: articleData.content || null,
-            excerpt: articleData.excerpt || null,
-            author: articleData.author || null,
-            siteName: articleData.siteName || null,
-            savedAt: new Date().toISOString(),
-            readAt: null,
-            archivedAt: null,
-            highlights: [],
-            notes: '',
-            error: articleData.error || null
-        };
-
-        db.articles.unshift(article);
-        this.save(db);
-
-        return { lastInsertRowid: article.id, article };
-    }
-
-    // Makale güncelle
-    update(id, updates) {
-        const db = this.load();
-        const index = db.articles.findIndex(a => a.id === parseInt(id));
-
-        if (index === -1) return { success: false };
-
-        db.articles[index] = { ...db.articles[index], ...updates };
-        this.save(db);
-
-        return { success: true, article: db.articles[index] };
+            const article = this.statements.findById.get(result.lastInsertRowid);
+            return { lastInsertRowid: result.lastInsertRowid, article };
+        } catch (error) {
+            // UNIQUE constraint hatası
+            if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+                const existing = this.findByUrl(articleData.url);
+                return { exists: true, article: existing };
+            }
+            throw error;
+        }
     }
 
     // Makale sil
     delete(id) {
-        const db = this.load();
-        const index = db.articles.findIndex(a => a.id === parseInt(id));
-
-        if (index === -1) return { success: false };
-
-        db.articles.splice(index, 1);
-        this.save(db);
-
-        return { success: true };
+        const result = this.statements.delete.run(parseInt(id));
+        return { success: result.changes > 0 };
     }
 
     // === ÖZEL İŞLEMLER ===
 
     // Okundu olarak işaretle
     markAsRead(id) {
-        return this.update(id, { readAt: new Date().toISOString() });
+        const result = this.statements.markAsRead.run(parseInt(id));
+        return { success: result.changes > 0 };
+    }
+
+    // Okunmadı olarak işaretle
+    unmarkAsRead(id) {
+        const result = this.statements.unmarkAsRead.run(parseInt(id));
+        return { success: result.changes > 0 };
     }
 
     // Arşive taşı
     archive(id) {
-        return this.update(id, { archivedAt: new Date().toISOString() });
+        const result = this.statements.archive.run(parseInt(id));
+        return { success: result.changes > 0 };
     }
 
     // Arşivden çıkar
     unarchive(id) {
-        return this.update(id, { archivedAt: null });
+        const result = this.statements.unarchive.run(parseInt(id));
+        return { success: result.changes > 0 };
     }
 
     // Highlight ekle
-    addHighlight(id, text) {
-        const db = this.load();
-        const article = db.articles.find(a => a.id === parseInt(id));
+    addHighlight(id, text, color = 'yellow', startOffset = null, endOffset = null) {
+        try {
+            const result = this.statements.addHighlight.run(
+                parseInt(id),
+                text,
+                startOffset,
+                endOffset,
+                color
+            );
 
-        if (!article) return { success: false };
-
-        if (!article.highlights) article.highlights = [];
-
-        const highlight = {
-            id: Date.now(),
-            text,
-            createdAt: new Date().toISOString()
-        };
-
-        article.highlights.push(highlight);
-        this.save(db);
-
-        return { success: true, highlight };
+            return {
+                success: true,
+                highlight: {
+                    id: result.lastInsertRowid,
+                    text,
+                    createdAt: new Date().toISOString()
+                }
+            };
+        } catch (error) {
+            console.error('[DB] Highlight eklenirken hata:', error.message);
+            return { success: false };
+        }
     }
 
     // Highlight sil
     removeHighlight(articleId, highlightId) {
-        const db = this.load();
-        const article = db.articles.find(a => a.id === parseInt(articleId));
-
-        if (!article?.highlights) return { success: false };
-
-        const index = article.highlights.findIndex(h => h.id === parseInt(highlightId));
-        if (index === -1) return { success: false };
-
-        article.highlights.splice(index, 1);
-        this.save(db);
-
-        return { success: true };
+        const result = this.statements.removeHighlight.run(
+            parseInt(highlightId),
+            parseInt(articleId)
+        );
+        return { success: result.changes > 0 };
     }
 
     // Not kaydet
     saveNotes(id, notes) {
-        return this.update(id, { notes });
+        const result = this.statements.updateNotes.run(notes, parseInt(id));
+        return { success: result.changes > 0 };
     }
 
     // === DTO DÖNÜŞÜMLER ===
@@ -188,10 +254,10 @@ class ArticleRepository {
             url: article.url,
             title: article.title,
             excerpt: article.excerpt,
-            site_name: article.siteName,
-            saved_at: article.savedAt,
-            read_at: article.readAt,
-            archived_at: article.archivedAt,
+            site_name: article.site_name,
+            saved_at: article.saved_at,
+            read_at: article.read_at,
+            archived_at: article.archived_at,
             error: article.error
         };
     }
@@ -205,18 +271,31 @@ class ArticleRepository {
             content: article.content,
             excerpt: article.excerpt,
             author: article.author,
-            site_name: article.siteName,
-            saved_at: article.savedAt,
-            read_at: article.readAt,
-            archived_at: article.archivedAt,
-            highlights: article.highlights || [],
+            site_name: article.site_name,
+            saved_at: article.saved_at,
+            read_at: article.read_at,
             notes: article.notes || '',
+            highlights: article.highlights || [],
             error: article.error
         };
+    }
+
+    // Veritabanını kapat
+    close() {
+        if (this.db) {
+            this.db.close();
+        }
     }
 }
 
 // Singleton instance
 const articleRepository = new ArticleRepository();
+
+// Process kapanırken veritabanını kapat
+process.on('exit', () => articleRepository.close());
+process.on('SIGINT', () => {
+    articleRepository.close();
+    process.exit(0);
+});
 
 module.exports = articleRepository;

@@ -19,6 +19,11 @@ function cleanupRateLimits() {
 setInterval(cleanupRateLimits, windowMs);
 
 function rateLimiter(req, res, next) {
+    // Development modda rate limit uygulama
+    if (config.isDevelopment) {
+        return next();
+    }
+
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const now = Date.now();
 

@@ -53,7 +53,8 @@ const schemas = {
             'string.min': 'Highlight metni boş olamaz',
             'string.max': 'Highlight metni çok uzun',
             'any.required': 'Highlight metni gerekli'
-        })
+        }),
+        color: Joi.string().valid('yellow', 'green', 'blue', 'pink').optional()
     }),
 
     notes: Joi.object({
@@ -64,6 +65,22 @@ const schemas = {
 
     idParam: Joi.object({
         id: Joi.number().integer().positive().required()
+    }),
+
+    restore: Joi.object({
+        mode: Joi.string().valid('merge', 'replace').default('merge').messages({
+            'any.only': 'Mode "merge" veya "replace" olmalı'
+        }),
+        backup: Joi.object({
+            version: Joi.string().required(),
+            exportedAt: Joi.string().required(),
+            data: Joi.object({
+                articles: Joi.array().required(),
+                highlights: Joi.array().required()
+            }).required()
+        }).required().messages({
+            'any.required': 'Yedek verisi gerekli'
+        })
     })
 };
 
