@@ -51,15 +51,51 @@ router.post('/save-with-content', validate(schemas.saveWithContent), asyncHandle
     return success(res, { article: result.article }, 'Makale kaydedildi (tarayıcıdan)');
 }));
 
-// Tüm makaleleri listele
+// Tüm makaleleri listele (pagination destekli)
 router.get('/articles', asyncHandler(async (req, res) => {
-    const articles = await articleRepository.findAll();
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+
+    const articles = await articleRepository.findAll(page, limit);
+
+    // Eğer pagination varsa toplam sayıyı da döndür
+    if (page !== null && typeof articleRepository.count === 'function') {
+        const total = await articleRepository.count();
+        return success(res, {
+            articles,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+
     return success(res, { articles });
 }));
 
-// Arşivlenmiş makaleleri listele
+// Arşivlenmiş makaleleri listele (pagination destekli)
 router.get('/archived', asyncHandler(async (req, res) => {
-    const articles = await articleRepository.findArchived();
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+
+    const articles = await articleRepository.findArchived(page, limit);
+
+    // Eğer pagination varsa toplam sayıyı da döndür
+    if (page !== null && typeof articleRepository.countArchived === 'function') {
+        const total = await articleRepository.countArchived();
+        return success(res, {
+            articles,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+
     return success(res, { articles });
 }));
 

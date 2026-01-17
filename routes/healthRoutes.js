@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const cache = require('../utils/cache');
 const config = require('../config');
+const { checkConnection } = require('../utils/mongodb');
 
 /**
  * @swagger
@@ -39,11 +40,13 @@ router.get('/health', (req, res) => {
  *       200:
  *         description: Sunucu hazır
  */
-router.get('/ready', (req, res) => {
-    // Burada veritabanı bağlantısı vb. kontrol edilebilir
+router.get('/ready', async (req, res) => {
+    const dbStatus = await checkConnection();
+
     res.json({
         ready: true,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        database: dbStatus
     });
 });
 

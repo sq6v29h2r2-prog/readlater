@@ -3,6 +3,8 @@
 const fetch = require('node-fetch');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const crypto = require('crypto');
+const cache = require('../utils/cache');
 
 /**
  * Başlığı temizle - site adı prefix/suffix'lerini kaldır
@@ -443,11 +445,7 @@ function parseContent(html, url) {
 function formatContent(html) {
     if (!html) return '';
 
-    // Önce IE/Outlook conditional comments'ları temizle
-    html = html.replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, '');
-    html = html.replace(/<!\[endif\]-->/gi, '');
-    html = html.replace(/<!--\[if[^\]]*>/gi, '');
-    // HTML yorumlarını temizle
+    // Tüm HTML yorumlarını tek seferde temizle (IE/Outlook conditional + normal comments)
     html = html.replace(/<!--[\s\S]*?-->/g, '');
 
     const dom = new JSDOM(html);
@@ -503,42 +501,22 @@ function formatContent(html) {
         // İçeriği HTML olarak al
         let html = body.innerHTML;
 
-        // Tablo yapısını kaldır, içeriği koru
+        // Tablo yapısını kaldır, içeriği koru - Combined single pass
         html = html
-            .replace(/<table[^>]*>/gi, '<div>')
-            .replace(/<\/table>/gi, '</div>')
-            .replace(/<tbody[^>]*>/gi, '')
-            .replace(/<\/tbody>/gi, '')
-            .replace(/<tr[^>]*>/gi, '<div>')
-            .replace(/<\/tr>/gi, '</div>')
-            .replace(/<td[^>]*>/gi, '<div>')
-            .replace(/<\/td>/gi, '</div>')
-            .replace(/<th[^>]*>/gi, '<div>')
-            .replace(/<\/th>/gi, '</div>');
+            .replace(/<\/?tbody[^>]*>/gi, '')
+            .replace(/<(table|tr|td|th)([^>]*)>/gi, '<div>')
+            .replace(/<\/(table|tr|td|th)>/gi, '</div>');
 
-        // Inline style ve gereksiz attribute'ları kaldır
-        html = html.replace(/\s*style="[^"]*"/gi, '');
-        html = html.replace(/\s*class="[^"]*"/gi, '');
-        html = html.replace(/\s*bgcolor="[^"]*"/gi, '');
-        html = html.replace(/\s*width="[^"]*"/gi, '');
-        html = html.replace(/\s*height="[^"]*"/gi, '');
-        html = html.replace(/\s*align="[^"]*"/gi, '');
-        html = html.replace(/\s*valign="[^"]*"/gi, '');
-        html = html.replace(/\s*cellpadding="[^"]*"/gi, '');
-        html = html.replace(/\s*cellspacing="[^"]*"/gi, '');
-        html = html.replace(/\s*border="[^"]*"/gi, '');
-        html = html.replace(/\s*tabindex="[^"]*"/gi, '');
+        // Inline style ve gereksiz attribute'ları kaldır - Combined single pass
+        html = html.replace(/\s*(style|class|bgcolor|width|height|align|valign|cellpadding|cellspacing|border|tabindex)="[^"]*"/gi, '');
 
-        // &nbsp; temizle
-        html = html.replace(/&nbsp;/g, ' ');
-
-        // Boş div'leri temizle
-        html = html.replace(/<div>\s*<\/div>/gi, '');
-        html = html.replace(/<div>\s*<div>/gi, '<div>');
-        html = html.replace(/<\/div>\s*<\/div>/gi, '</div>');
-
-        // Çoklu boşlukları temizle
-        html = html.replace(/\s+/g, ' ');
+        // Multiple cleanups in single pass
+        html = html
+            .replace(/&nbsp;/g, ' ')
+            .replace(/<div>\s*<\/div>/gi, '')
+            .replace(/<div>\s*<div>/gi, '<div>')
+            .replace(/<\/div>\s*<\/div>/gi, '</div>')
+            .replace(/\s+/g, ' ');
 
         // <strong> ve <b> içindeki kısa metinleri h2 yap (başlık olarak)
         const dom2 = new JSDOM(html);
@@ -603,11 +581,22 @@ function formatContent(html) {
 }
 
 /**
- * URL'den makale çek ve parse et
+ * URL'den makale çek ve parse et (cache destekli)
  * @param {string} url - Makale URL'si
  * @returns {Promise<object>} Parsed article data
  */
 async function fetchAndParse(url) {
+    // Cache key oluştur (URL hash)
+    const urlHash = crypto.createHash('md5').update(url).digest('hex');
+    const cacheKey = `article:parsed:${urlHash}`;
+
+    // Cache'de var mı kontrol et
+    const cached = cache.get(cacheKey);
+    if (cached) {
+        console.log(`[CACHE HIT] ${url}`);
+        return cached;
+    }
+
     console.log(`[FETCH] ${url}`);
 
     try {
@@ -619,13 +608,18 @@ async function fetchAndParse(url) {
         let title = parsed.title || 'Başlıksız';
         title = cleanTitle(title, parsed.siteName || new URL(url).hostname);
 
-        return {
+        const result = {
             title: title,
             content: formatContent(parsed.content),
             excerpt: parsed.excerpt || '',
             author: parsed.byline || '',
             siteName: parsed.siteName || new URL(url).hostname
         };
+
+        // Başarılı parse'ı cache'le (1 saat)
+        cache.set(cacheKey, result, 3600);
+
+        return result;
     } catch (error) {
         // 403 Forbidden veya bot koruması hatası
         if (error.message && error.message.includes('403')) {

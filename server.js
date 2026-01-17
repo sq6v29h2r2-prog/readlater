@@ -23,7 +23,7 @@ const { errorHandler } = require('./middlewares/errorHandler');
 const { articleRoutes, pageRoutes, healthRoutes } = require('./routes');
 
 // Database
-const connectDB = require('./utils/mongodb');
+const { connectDB } = require('./utils/mongodb');
 connectDB();
 
 const app = express();
@@ -50,8 +50,26 @@ app.use(hppProtection);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files - Cache for 1 day in production
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: config.env === 'production' ? '1d' : 0,
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        // Cache CSS/JS/fonts aggressively
+        if (filePath.match(/\.(css|js|woff2?|ttf|otf)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+        }
+        // Cache images moderately
+        else if (filePath.match(/\.(jpg|jpeg|png|gif|svg|ico)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+        }
+        // HTML files - minimal caching
+        else if (filePath.match(/\.html$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+        }
+    }
+}));
 
 // CORS with whitelist
 app.use(cors);

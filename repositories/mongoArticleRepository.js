@@ -1,12 +1,38 @@
 const Article = require('../models/Article');
 
 class MongoArticleRepository {
-    async findAll() {
-        return await Article.find({ is_archived: false }).sort({ saved_at: -1 });
+    async findAll(page = null, limit = 50) {
+        const query = Article.find({ is_archived: false })
+            .select('-content') // Exclude heavy content field from list view
+            .sort({ saved_at: -1 });
+
+        if (page !== null) {
+            const skip = (page - 1) * limit;
+            query.skip(skip).limit(limit);
+        }
+
+        return await query;
     }
 
-    async findArchived() {
-        return await Article.find({ is_archived: true }).sort({ saved_at: -1 });
+    async findArchived(page = null, limit = 50) {
+        const query = Article.find({ is_archived: true })
+            .select('-content') // Exclude heavy content field from list view
+            .sort({ saved_at: -1 });
+
+        if (page !== null) {
+            const skip = (page - 1) * limit;
+            query.skip(skip).limit(limit);
+        }
+
+        return await query;
+    }
+
+    async count() {
+        return await Article.countDocuments({ is_archived: false });
+    }
+
+    async countArchived() {
+        return await Article.countDocuments({ is_archived: true });
     }
 
     async findById(id) {

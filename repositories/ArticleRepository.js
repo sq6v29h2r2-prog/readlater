@@ -75,17 +75,37 @@ class ArticleRepository {
 
             findAll: this.db.prepare(`
                 SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
-                FROM articles 
-                WHERE archived_at IS NULL 
+                FROM articles
+                WHERE archived_at IS NULL
                 ORDER BY saved_at DESC
+            `),
+
+            findAllPaginated: this.db.prepare(`
+                SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
+                FROM articles
+                WHERE archived_at IS NULL
+                ORDER BY saved_at DESC
+                LIMIT ? OFFSET ?
             `),
 
             findArchived: this.db.prepare(`
                 SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
-                FROM articles 
-                WHERE archived_at IS NOT NULL 
+                FROM articles
+                WHERE archived_at IS NOT NULL
                 ORDER BY archived_at DESC
             `),
+
+            findArchivedPaginated: this.db.prepare(`
+                SELECT id, url, title, excerpt, author, site_name, saved_at, read_at, archived_at, error
+                FROM articles
+                WHERE archived_at IS NOT NULL
+                ORDER BY archived_at DESC
+                LIMIT ? OFFSET ?
+            `),
+
+            countAll: this.db.prepare('SELECT COUNT(*) as count FROM articles WHERE archived_at IS NULL'),
+
+            countArchived: this.db.prepare('SELECT COUNT(*) as count FROM articles WHERE archived_at IS NOT NULL'),
 
             delete: this.db.prepare('DELETE FROM articles WHERE id = ?'),
 
@@ -120,15 +140,41 @@ class ArticleRepository {
     // === CRUD İŞLEMLERİ ===
 
     // Tüm makaleleri getir (arşivlenmemiş)
-    findAll() {
-        const articles = this.statements.findAll.all();
+    findAll(page = null, limit = 50) {
+        if (page === null) {
+            // Pagination olmadan (geriye dönük uyumluluk)
+            const articles = this.statements.findAll.all();
+            return articles.map(this.toDTO);
+        }
+
+        // Pagination ile
+        const offset = (page - 1) * limit;
+        const articles = this.statements.findAllPaginated.all(limit, offset);
         return articles.map(this.toDTO);
     }
 
     // Arşivlenmiş makaleleri getir
-    findArchived() {
-        const articles = this.statements.findArchived.all();
+    findArchived(page = null, limit = 50) {
+        if (page === null) {
+            // Pagination olmadan (geriye dönük uyumluluk)
+            const articles = this.statements.findArchived.all();
+            return articles.map(this.toDTO);
+        }
+
+        // Pagination ile
+        const offset = (page - 1) * limit;
+        const articles = this.statements.findArchivedPaginated.all(limit, offset);
         return articles.map(this.toDTO);
+    }
+
+    // Toplam makale sayısı (arşivlenmemiş)
+    count() {
+        return this.statements.countAll.get().count;
+    }
+
+    // Toplam arşivlenmiş makale sayısı
+    countArchived() {
+        return this.statements.countArchived.get().count;
     }
 
     // ID ile makale bul
