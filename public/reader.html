@@ -7,7 +7,9 @@
     <title>Okuma - ReadLater</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@300;400;600&family=Poppins:wght@300;400;600&family=Spectral:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
     <style>
         /* Kontrol grupları */
@@ -116,6 +118,26 @@
         }
 
         /* Font sınıfları - Recursive Force specificity */
+        .reader-body.font-lora,
+        .reader-body.font-lora * {
+            font-family: 'Lora', serif !important;
+        }
+
+        .reader-body.font-spectral,
+        .reader-body.font-spectral * {
+            font-family: 'Spectral', serif !important;
+        }
+
+        .reader-body.font-outfit,
+        .reader-body.font-outfit * {
+            font-family: 'Outfit', sans-serif !important;
+        }
+
+        .reader-body.font-poppins,
+        .reader-body.font-poppins * {
+            font-family: 'Poppins', sans-serif !important;
+        }
+
         .reader-body.font-helvetica,
         .reader-body.font-helvetica * {
             font-family: Helvetica, Arial, sans-serif !important;
@@ -623,9 +645,15 @@
             <!-- Yazı Tipi -->
             <div class="control-group">
                 <label>Yazı:</label>
-                <button class="ctrl-btn font-btn active" data-font="helvetica">Helvetica</button>
-                <button class="ctrl-btn font-btn" data-font="georgia">Georgia</button>
-                <button class="ctrl-btn font-btn" data-font="avenir">Avenir Next</button>
+                <div style="display: flex; gap: 0.2rem; flex-wrap: wrap;">
+                    <button class="ctrl-btn font-btn active" data-font="helvetica">Helv</button>
+                    <button class="ctrl-btn font-btn" data-font="georgia">Geo</button>
+                    <button class="ctrl-btn font-btn" data-font="avenir">Ave</button>
+                    <button class="ctrl-btn font-btn" data-font="lora">Lora</button>
+                    <button class="ctrl-btn font-btn" data-font="spectral">Spec</button>
+                    <button class="ctrl-btn font-btn" data-font="outfit">Out</button>
+                    <button class="ctrl-btn font-btn" data-font="poppins">Pop</button>
+                </div>
             </div>
 
             <!-- Yazı Boyutu -->
@@ -661,6 +689,14 @@
             <!-- Notlar -->
             <div class="control-group">
                 <button class="ctrl-btn" id="notesToggle" title="Notlar">📝</button>
+            </div>
+
+            <!-- Satır Aralığı -->
+            <div class="control-group">
+                <label>Aralık:</label>
+                <button class="ctrl-btn nh-btn" data-nh="1.2">S</button>
+                <button class="ctrl-btn nh-btn active" data-nh="1.6">M</button>
+                <button class="ctrl-btn nh-btn" data-nh="2.0">L</button>
             </div>
 
             <!-- Tam Ekran -->
@@ -780,9 +816,27 @@
         function setFont(font, notify = true) {
             fontBtns.forEach(b => b.classList.remove('active'));
             document.querySelector(`.font-btn[data-font="${font}"]`)?.classList.add('active');
-            articleBody.classList.remove('font-helvetica', 'font-georgia', 'font-avenir');
+            articleBody.classList.remove('font-helvetica', 'font-georgia', 'font-avenir', 'font-lora', 'font-spectral', 'font-outfit', 'font-poppins');
             articleBody.classList.add(`font-${font}`);
             if (notify) showToast('Yazı tipi değiştirildi');
+        }
+
+        // === SATIR ARALIĞI ===
+        const nhBtns = document.querySelectorAll('.nh-btn');
+        setLineHeight(localStorage.getItem('readlater-nh') || '1.6', false);
+
+        nhBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setLineHeight(btn.dataset.nh, true);
+                localStorage.setItem('readlater-nh', btn.dataset.nh);
+            });
+        });
+
+        function setLineHeight(nh, notify = true) {
+            nhBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector(`.nh-btn[data-nh="${nh}"]`)?.classList.add('active');
+            articleBody.style.setProperty('--reader-line-height', nh);
+            if (notify) showToast('Satır aralığı güncellendi');
         }
 
         // === YAZI BOYUTU ===
