@@ -602,6 +602,18 @@ async function fetchAndParse(url) {
     try {
         // Önce doğrudan siteyi dene
         const html = await fetchHtml(url);
+
+        // Soft Paywall / Teaser Tespiti
+        // Fayn Press, Ghost vb. siteler için
+        if (
+            html.includes('post-content') && html.includes('is-teaser') ||
+            html.includes('Bu içerik ücretli abonelere özel') ||
+            html.includes('Abonelik planlarını gör')
+        ) {
+            console.log('[FETCH] Soft Paywall (Teaser) tespit edildi, alternatif kaynaklara geçiliyor...');
+            throw new Error('Soft Paywall Detected');
+        }
+
         const parsed = parseContent(html, url);
 
         // Başlığı temizle (site adı prefix/suffix'lerini kaldır)
@@ -621,8 +633,8 @@ async function fetchAndParse(url) {
 
         return result;
     } catch (error) {
-        // 403 Forbidden veya bot koruması hatası
-        if (error.message && error.message.includes('403')) {
+        // 403 Forbidden, bot koruması veya Soft Paywall hatası
+        if (error.message && (error.message.includes('403') || error.message.includes('Paywall'))) {
             console.log(`[FETCH] 403 hatası, alternatif kaynaklar deneniyor...`);
 
             // 0. AMP versiyonunu dene (T24, Hürriyet vb. siteler için)
@@ -651,6 +663,31 @@ async function fetchAndParse(url) {
                 }
             } catch (ampError) {
                 console.log(`[FETCH] AMP versiyonu başarısız: ${ampError.message}`);
+            }
+
+            // 0.5. Googlebot User-Agent ile dene (Soft Paywall bypass)
+            try {
+                console.log(`[FETCH] Googlebot taklidi deneniyor...`);
+                // Googlebot UA ile fetch
+                const googlebotHtml = await fetchHtmlWithUA(url, 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)');
+
+                // Yine paywall kontrolü yap
+                if (!googlebotHtml.includes('Bu içerik ücretli abonelere özel') && !googlebotHtml.includes('is-teaser')) {
+                    const parsed = parseContent(googlebotHtml, url);
+
+                    if (parsed.content && parsed.content.length > 1000) {
+                        console.log(`[FETCH] Googlebot taklidi başarılı!`);
+                        return {
+                            title: cleanTitle(parsed.title || 'Başlıksız', new URL(url).hostname),
+                            content: formatContent(parsed.content),
+                            excerpt: parsed.excerpt || '',
+                            author: parsed.byline || '',
+                            siteName: parsed.siteName || new URL(url).hostname
+                        };
+                    }
+                }
+            } catch (gbError) {
+                console.log(`[FETCH] Googlebot taklidi başarısız: ${gbError.message}`);
             }
 
             // 1. Wayback Machine dene (en güvenilir)
@@ -684,6 +721,10 @@ async function fetchAndParse(url) {
                 const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}&strip=1`;
                 const cacheHtml = await fetchHtmlSimple(cacheUrl);
                 const parsed = parseContent(cacheHtml, url);
+
+                if (parsed.title === 'Google Search' || parsed.content.includes('trouble accessing Google Search')) {
+                    throw new Error('Google Cache captcha/error page');
+                }
 
                 console.log(`[FETCH] Google Cache başarılı!`);
                 return {
@@ -720,6 +761,37 @@ async function fetchAndParse(url) {
             throw new Error(`Site erişimi engellendi (403). Lütfen tarayıcı extension'ı ile sayfada sağ tık yaparak kaydedin.`);
         }
 
+        throw error;
+    }
+}
+
+
+/**
+ * Özel User-Agent ile HTML çek
+ */
+async function fetchHtmlWithUA(url, userAgent, timeout = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Referer': 'https://www.google.com/'
+            }
+        });
+
+        clearTimeout(timer);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        return await response.text();
+    } catch (error) {
+        clearTimeout(timer);
         throw error;
     }
 }
@@ -761,7 +833,33 @@ async function fetchHtmlSimple(url, timeout = 15000) {
  * @returns {object} Parsed article data
  */
 function parseHtml(html, url) {
-    const parsed = parseContent(html, url);
+    // Ghost/Fayn Press soft paywall bypass
+    // Tarayıcı extension'ı tam HTML'i gönderiyor, ancak içerik CSS ile gizlenmiş olabilir
+    const dom = new JSDOM(html, { url });
+    const doc = dom.window.document;
+
+    // is-teaser class'ını kaldır (Ghost premium content)
+    doc.querySelectorAll('.is-teaser').forEach(el => {
+        el.classList.remove('is-teaser');
+    });
+
+    // Paywall overlay ve modal elementlerini kaldır
+    doc.querySelectorAll('.fayn-overlay, .fayn-modal, [class*="paywall"], [class*="subscribe-modal"]').forEach(el => {
+        el.remove();
+    });
+
+    // "Bu içerik ücretli abonelere özel" mesajını içeren elementleri kaldır
+    doc.querySelectorAll('div, section').forEach(el => {
+        if (el.textContent && el.textContent.includes('Bu içerik ücretli abonelere özel')) {
+            el.remove();
+        }
+    });
+
+    // Temizlenmiş HTML'i al
+    const cleanedHtml = doc.documentElement.outerHTML;
+
+    // Şimdi Readability ile parse et
+    const parsed = parseContent(cleanedHtml, url);
 
     return {
         title: parsed.title || 'Başlıksız',
@@ -771,6 +869,7 @@ function parseHtml(html, url) {
         siteName: parsed.siteName || new URL(url).hostname
     };
 }
+
 
 module.exports = {
     fetchHtml,
