@@ -879,13 +879,18 @@
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
 
-            // Paleti seçimin üstüne konumlandır
-            let left = rect.left + window.scrollX + (rect.width / 2) - 80;
-            let top = rect.top + window.scrollY - 50;
+            // Paleti seçimin üstüne konumlandır (Fixed position olduğu için scroll eklemiyoruz)
+            let left = rect.left + (rect.width / 2) - 80;
+            let top = rect.top - 55;
 
             // Ekran dışına çıkmaması için kontrol
             if (left < 10) left = 10;
-            if (top < 10) top = rect.bottom + window.scrollY + 10;
+            if (left + 160 > window.innerWidth) left = window.innerWidth - 170;
+
+            // Eğer üstte yer yoksa altına koy
+            if (top < 10) {
+                top = rect.bottom + 10;
+            }
 
             highlightPopup.style.left = left + 'px';
             highlightPopup.style.top = top + 'px';
