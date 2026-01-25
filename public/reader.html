@@ -864,66 +864,77 @@
 
         // === HIGHLIGHT MODU ===
         const highlightToggle = document.getElementById('highlightToggle');
+        let currentSelection = null;
 
         highlightToggle.addEventListener('click', () => {
             highlightMode = !highlightMode;
             highlightToggle.classList.toggle('active', highlightMode);
             highlightIndicator.classList.toggle('visible', highlightMode);
+            showToast(highlightMode ? 'Highlight modu açık' : 'Highlight modu kapalı');
         });
 
         // Helper: Highlight renk paletini göster
-        function showColorPalette(selection, e = null) {
+        function showColorPalette(selection) {
+            currentSelection = selection;
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
 
-            // Eğer event parametresi varsa (sağ tık), mouse pozisyonuna daha yakın yapabiliriz 
-            // ama genel seçim üstünde durması daha şık
-            highlightPopup.style.left = (rect.left + window.scrollX + (rect.width / 2) - 80) + 'px';
-            highlightPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
+            // Paleti seçimin üstüne konumlandır
+            let left = rect.left + window.scrollX + (rect.width / 2) - 80;
+            let top = rect.top + window.scrollY - 50;
+
+            // Ekran dışına çıkmaması için kontrol
+            if (left < 10) left = 10;
+            if (top < 10) top = rect.bottom + window.scrollY + 10;
+
+            highlightPopup.style.left = left + 'px';
+            highlightPopup.style.top = top + 'px';
             highlightPopup.classList.add('visible');
-
-            // Renk butonlarına listener ekle
-            document.querySelectorAll('.hl-color-btn').forEach(btn => {
-                btn.onclick = async (ev) => {
-                    ev.stopPropagation();
-                    await addHighlight(selection, btn.dataset.color);
-                    highlightPopup.classList.remove('visible');
-                };
-            });
-
-            document.getElementById('closePopupBtn').onclick = () => {
-                highlightPopup.classList.remove('visible');
-                selection.removeAllRanges();
-            };
         }
 
-        // Mouse bırakınca (Eğer mod açıksa otomatik göster)
-        document.addEventListener('mouseup', (e) => {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
+        // Renk butonlarına tek seferlik listener
+        document.querySelectorAll('.hl-color-btn').forEach(btn => {
+            btn.addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                if (currentSelection) {
+                    await addHighlight(currentSelection, btn.dataset.color);
+                    highlightPopup.classList.remove('visible');
+                    currentSelection = null;
+                }
+            });
+        });
 
-            if (selectedText.length > 0 && highlightMode && articleBody.contains(selection.anchorNode)) {
-                showColorPalette(selection);
-            } else if (!highlightPopup.contains(e.target)) {
-                highlightPopup.classList.remove('visible');
+        document.getElementById('closePopupBtn').addEventListener('click', () => {
+            highlightPopup.classList.remove('visible');
+            if (currentSelection) {
+                currentSelection.removeAllRanges();
+                currentSelection = null;
             }
         });
 
-        // SAĞ TIK ile Highlight Modunu Tetikle (Mod kapalı olsa bile çalışır)
-        document.addEventListener('contextmenu', (e) => {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
+        // Metin seçimi bittiğinde palette göster (mod açıksa VEYA articleBody içindeyse)
+        document.addEventListener('mouseup', (e) => {
+            // Popup içine tıklandıysa işlem yapma
+            if (highlightPopup.contains(e.target)) return;
 
-            if (selectedText.length > 0 && articleBody.contains(selection.anchorNode)) {
-                e.preventDefault(); // Standart sağ tık menüsünü engelle
-                showColorPalette(selection, e);
+            // Kısa gecikme ile seçimi kontrol et (seçim tamamlansın)
+            setTimeout(() => {
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
 
-                // Eğer mod kapalıysa otomatik açabiliriz (isteğe bağlı)
-                if (!highlightMode) {
-                    highlightMode = true;
-                    highlightToggle.classList.add('active');
-                    highlightIndicator.classList.add('visible');
+                // Makale içinde metin seçildiyse renk paletini göster
+                if (selectedText.length > 2 && articleBody.contains(selection.anchorNode)) {
+                    showColorPalette(selection);
+                } else {
+                    highlightPopup.classList.remove('visible');
                 }
+            }, 10);
+        });
+
+        // Sayfa dışı tıklamada popup'ı kapat
+        document.addEventListener('mousedown', (e) => {
+            if (!highlightPopup.contains(e.target) && !articleBody.contains(e.target)) {
+                highlightPopup.classList.remove('visible');
             }
         });
 
