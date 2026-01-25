@@ -965,44 +965,106 @@
                     range.insertNode(span);
                     selection.removeAllRanges();
 
-                    // Yeni eklenen highlight'a silme listener'ı ekle
-                    span.onclick = () => {
-                        if (confirm('Bu vurgulamayı silmek ister misiniz?')) deleteHighlight(span.dataset.hlId, span);
-                    };
+                    // Yeni eklenen highlight'a aksiyon ekle
+                    initHighlightAction(span);
                 } else {
-                    alert('Highlight kaydedilirken bir hata oluştu.');
+                    showToast('Hata: Highlight kaydedilemedi');
                 }
             } catch (error) {
                 console.error('Highlight kaydedilemedi:', error);
-                alert('Highlight kaydedilemedi: Sunucu hatası');
             }
+        }
+
+        function initHighlightAction(el) {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                showHighlightMenu(el, e);
+            };
+        }
+
+        function showHighlightMenu(el, e) {
+            // Varsa eski menüyü kaldır
+            const oldMenu = document.getElementById('hl-action-menu');
+            if (oldMenu) oldMenu.remove();
+
+            const menu = document.createElement('div');
+            menu.id = 'hl-action-menu';
+            menu.className = 'highlight-popup visible'; // Mevcut popup stilini kullanıyoruz
+            menu.style.position = 'fixed';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = (e.clientY - 50) + 'px';
+            menu.style.zIndex = '2001';
+            menu.style.background = 'var(--bg-secondary)';
+            menu.style.borderRadius = '12px';
+            menu.style.padding = '5px';
+            menu.style.display = 'flex';
+            menu.style.gap = '5px';
+            menu.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'ctrl-btn';
+            shareBtn.innerHTML = '📸';
+            shareBtn.title = 'Resim Olarak Kaydet';
+            shareBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                captureHighlight(el);
+                menu.remove();
+            };
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'ctrl-btn';
+            delBtn.innerHTML = '🗑️';
+            delBtn.title = 'Sil';
+            delBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                if (confirm('Bu vurgulamayı silmek istediğinize emin misiniz?')) {
+                    deleteHighlight(el.dataset.hlId, el);
+                }
+                menu.remove();
+            };
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'ctrl-btn';
+            closeBtn.innerHTML = '✕';
+            closeBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                menu.remove();
+            };
+
+            menu.appendChild(shareBtn);
+            menu.appendChild(delBtn);
+            menu.appendChild(closeBtn);
+            document.body.appendChild(menu);
+
+            // Dışarı tıklayınca kapat
+            setTimeout(() => {
+                const closeHandler = (ev) => {
+                    if (!menu.contains(ev.target)) {
+                        menu.remove();
+                        document.removeEventListener('mousedown', closeHandler);
+                    }
+                };
+                document.addEventListener('mousedown', closeHandler);
+            }, 10);
         }
 
         function applyHighlights(highlights) {
             if (!highlights || highlights.length === 0) return;
             let html = articleBody.innerHTML;
 
-            // Highlightları metin uzunluğuna göre sırala (iç içe geçmemesi için büyükten küçüğe)
             const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length);
 
             sorted.forEach(hl => {
                 if (hl.text) {
                     const escaped = hl.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const colorClass = `hl-${hl.color || 'yellow'}`;
-                    // Sadece metin düğümlerinde (text nodes) değişiklik yapmak en güvenlisidir ama şimdilik iyileştirilmiş regex kullanalım
-                    // Daha önce değiştirilmiş olanları bozmamak için negatif lookahead/lookbehind gerekebilir
                     const regex = new RegExp(`(${escaped})(?![^<]*>|[^<>]*<\/span>)`, 'g');
                     html = html.replace(regex, `<span class="highlight ${colorClass}" data-hl-id="${hl.id}">$1</span>`);
                 }
             });
             articleBody.innerHTML = html;
 
-            document.querySelectorAll('.highlight').forEach(el => {
-                el.onclick = (e) => {
-                    e.stopPropagation();
-                    if (confirm('Bu vurgulamayı silmek ister misiniz?')) deleteHighlight(el.dataset.hlId, el);
-                };
-            });
+            document.querySelectorAll('.highlight').forEach(el => initHighlightAction(el));
         }
 
         async function deleteHighlight(hlId, element) {
@@ -1149,8 +1211,78 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
+        async function captureHighlight(el) {
+            showToast('Resim oluşturuluyor...');
+
+            // Gizli bir element oluştur (Capture için güzel bir kart)
+            const captureArea = document.createElement('div');
+            captureArea.style.position = 'fixed';
+            captureArea.style.top = '-9999px';
+            captureArea.style.left = '-9999px';
+            captureArea.style.width = '600px';
+            captureArea.style.padding = '40px';
+            captureArea.style.backgroundColor = getComputedStyle(document.body).getPropertyValue('--bg-primary') || '#0d1117';
+            captureArea.style.color = getComputedStyle(document.body).getPropertyValue('--text-primary') || '#e6edf3';
+            captureArea.style.fontFamily = getComputedStyle(articleBody).fontFamily;
+            captureArea.style.borderRadius = '16px';
+            captureArea.style.boxShadow = '0 20px 50px rgba(0,0,0,0.3)';
+
+            const quoteIcon = document.createElement('div');
+            quoteIcon.innerHTML = '“';
+            quoteIcon.style.fontSize = '80px';
+            quoteIcon.style.lineHeight = '1';
+            quoteIcon.style.opacity = '0.2';
+            quoteIcon.style.marginBottom = '-30px';
+            quoteIcon.style.fontFamily = 'Georgia, serif';
+
+            const content = document.createElement('div');
+            content.style.fontSize = '24px';
+            content.style.lineHeight = '1.5';
+            content.style.position = 'relative';
+            content.style.zIndex = '1';
+            content.textContent = el.textContent;
+
+            const footer = document.createElement('div');
+            footer.style.marginTop = '30px';
+            footer.style.paddingTop = '20px';
+            footer.style.borderTop = '1px solid var(--border)';
+            footer.style.fontSize = '14px';
+            footer.style.color = 'var(--text-muted)';
+
+            const title = document.getElementById('articleTitle').textContent;
+            const site = document.getElementById('articleSite').textContent;
+            footer.innerHTML = `<strong>${title}</strong><br>${site} • ReadLater`;
+
+            captureArea.appendChild(quoteIcon);
+            captureArea.appendChild(content);
+            captureArea.appendChild(footer);
+            document.body.appendChild(captureArea);
+
+            try {
+                const canvas = await html2canvas(captureArea, {
+                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg-primary'),
+                    scale: 2, // Daha yüksek kalite
+                    logging: false,
+                    useCORS: true
+                });
+
+                const link = document.createElement('a');
+                link.download = `ReadLater-Highlight-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showToast('Resim indirildi! 📸');
+            } catch (err) {
+                console.error('Ekran görüntüsü hatası:', err);
+                showToast('Resim oluşturulamadı ❌');
+            } finally {
+                captureArea.remove();
+            }
+        }
+
         loadArticle();
     </script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </body>
 
 </html>
