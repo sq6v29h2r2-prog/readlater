@@ -11,7 +11,7 @@ const connectDB = async () => {
     try {
         await mongoose.connect(config.mongodbUri, {
             family: 4, // IPv4 zorla (Render + Atlas DNS sorunları için)
-            serverSelectionTimeoutMS: 5000, // 5 saniye timeout
+            serverSelectionTimeoutMS: 30000, // 30 saniye timeout (SRV DNS çözümleme yavaşlığı için)
             socketTimeoutMS: 45000, // 45 saniye socket timeout
             maxPoolSize: 10, // Max connection pool size
             minPoolSize: 2, // Min connection pool size

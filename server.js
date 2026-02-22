@@ -1,5 +1,11 @@
 // server.js - Ana sunucu dosyası (Production Ready + Security)
 
+// DNS Fix: Yerel DNS, MongoDB Atlas SRV kayıtlarını çözemiyorsa Google DNS kullan
+const dns = require('dns');
+try {
+    dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (e) { /* ignore */ }
+
 const express = require('express');
 const path = require('path');
 const http = require('http');    // ← EKLENDİ

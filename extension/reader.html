@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadLater — Okuma Modu</title>
+    <link rel="stylesheet" href="reader.css">
+    <style>
+        /* Override: this is a full page, not an overlay */
+        .readlater-reader-overlay {
+            position: relative !important;
+            min-height: 100vh !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="readlater-reader-overlay" id="readlater-overlay" data-theme="dark">
+        <!-- Toolbar -->
+        <div class="readlater-toolbar">
+            <div class="readlater-toolbar-left">
+                <button class="readlater-btn" id="rl-back" title="Orijinal sayfaya dön">← Geri</button>
+                <a class="readlater-btn" id="rl-original" href="#" target="_blank" title="Orijinal sayfayı aç">🔗
+                    Orijinal</a>
+            </div>
+            <div class="readlater-toolbar-center">
+                <!-- Font -->
+                <button class="readlater-btn active" data-font="sans" title="Sans-serif">Aa</button>
+                <button class="readlater-btn" data-font="serif" title="Serif"
+                    style="font-family: Georgia, serif !important;">Aa</button>
+                <button class="readlater-btn" data-font="mono" title="Mono"
+                    style="font-family: monospace !important;">Aa</button>
+                <span class="readlater-sep"></span>
+                <!-- Size -->
+                <button class="readlater-btn" id="rl-size-down" title="Küçült">A−</button>
+                <span class="readlater-btn" id="rl-size-display"
+                    style="cursor:default!important;min-width:32px!important;text-align:center!important;">18</span>
+                <button class="readlater-btn" id="rl-size-up" title="Büyüt">A+</button>
+                <span class="readlater-sep"></span>
+                <!-- Width -->
+                <button class="readlater-btn" data-width="narrow" title="Dar">S</button>
+                <button class="readlater-btn active" data-width="normal" title="Normal">M</button>
+                <button class="readlater-btn" data-width="wide" title="Geniş">L</button>
+                <span class="readlater-sep"></span>
+                <!-- Theme -->
+                <span class="readlater-theme-dot active" data-theme="dark" title="Koyu"></span>
+                <span class="readlater-theme-dot" data-theme="light" title="Açık"></span>
+                <span class="readlater-theme-dot" data-theme="sepia" title="Sepya"></span>
+                <span class="readlater-theme-dot" data-theme="black" title="Siyah"></span>
+            </div>
+            <div class="readlater-toolbar-right">
+                <button class="readlater-btn" id="rl-save" title="ReadLater'a kaydet">💾 Kaydet</button>
+            </div>
+        </div>
+
+        <!-- Content area -->
+        <div id="rl-content-area">
+            <div class="readlater-loading">
+                <div class="readlater-loading-spinner"></div>
+                <span class="readlater-loading-text">Makale okunuyor...</span>
+            </div>
+        </div>
+
+        <div class="readlater-scroll-top" id="rl-scroll-top" title="Başa dön">↑</div>
+        <div class="readlater-toast" id="rl-toast"></div>
+    </div>
+
+    <script src="Readability.js"></script>
+    <script src="reader-page.js"></script>
+</body>
+
+</html>

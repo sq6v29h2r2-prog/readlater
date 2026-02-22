@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "ReadLater",
-    "version": "3.0.0",
-    "description": "Makaleleri tek tıkla kaydet - Paywall bypass",
+    "version": "4.1.0",
+    "description": "Sayfaları temiz okuma modunda aç — Clarity Reader",
     "browser_specific_settings": {
         "gecko": {
             "id": "readlater@local.extension",
@@ -20,12 +20,11 @@
         "<all_urls>"
     ],
     "action": {
-        "default_popup": "popup.html",
         "default_icon": {
             "16": "icon16.png",
             "48": "icon48.png"
         },
-        "default_title": "ReadLater - Kaydet"
+        "default_title": "ReadLater — Okuma Modu"
     },
     "background": {
         "scripts": [

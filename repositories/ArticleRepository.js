@@ -50,6 +50,7 @@ class ArticleRepository {
                 text TEXT NOT NULL,
                 start_offset INTEGER,
                 end_offset INTEGER,
+                color TEXT DEFAULT 'yellow',
                 created_at TEXT DEFAULT (datetime('now', 'localtime')),
                 FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
             );
@@ -58,6 +59,18 @@ class ArticleRepository {
             CREATE INDEX IF NOT EXISTS idx_articles_archived ON articles(archived_at);
             CREATE INDEX IF NOT EXISTS idx_highlights_article ON highlights(article_id);
         `);
+
+        // Migration: Eski tabloda color sütunu yoksa ekle
+        try {
+            const tableInfo = this.db.prepare("PRAGMA table_info(highlights)").all();
+            const hasColorColumn = tableInfo.some(col => col.name === 'color');
+            if (!hasColorColumn) {
+                this.db.exec("ALTER TABLE highlights ADD COLUMN color TEXT DEFAULT 'yellow'");
+                console.log('[DB] Migration: highlights tablosuna color sütunu eklendi');
+            }
+        } catch (err) {
+            console.log('[DB] Migration kontrolü atlandı:', err.message);
+        }
     }
 
     // Prepared statements (performans için)
@@ -252,10 +265,10 @@ class ArticleRepository {
     }
 
     // Highlight ekle
-    addHighlight(id, text, color = 'yellow', startOffset = null, endOffset = null) {
+    addHighlight(articleId, text, color = 'yellow', startOffset = null, endOffset = null) {
         try {
             const result = this.statements.addHighlight.run(
-                parseInt(id),
+                parseInt(articleId),
                 text,
                 startOffset,
                 endOffset,
